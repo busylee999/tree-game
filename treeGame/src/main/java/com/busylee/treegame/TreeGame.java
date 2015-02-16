@@ -1,8 +1,6 @@
 package com.busylee.treegame;
 
-import android.widget.Toast;
-import com.busylee.treegame.branch.BranchEntity;
-import com.busylee.treegame.branch.BranchLeaf;
+import com.busylee.treegame.branch.*;
 import org.andengine.engine.camera.Camera;
 import org.andengine.engine.options.EngineOptions;
 import org.andengine.engine.options.ScreenOrientation;
@@ -13,11 +11,12 @@ import org.andengine.entity.util.FPSLogger;
 import org.andengine.opengl.texture.TextureOptions;
 import org.andengine.opengl.texture.atlas.bitmap.BitmapTextureAtlas;
 import org.andengine.opengl.texture.atlas.bitmap.BitmapTextureAtlasTextureRegionFactory;
-import org.andengine.opengl.texture.region.ITextureRegion;
+import org.andengine.opengl.texture.region.ITiledTextureRegion;
 import org.andengine.opengl.vbo.VertexBufferObjectManager;
 import org.andengine.ui.activity.SimpleBaseGameActivity;
 
 import java.io.IOException;
+import java.util.Random;
 
 /**
  * Created by busylee on 14.02.15.
@@ -31,16 +30,17 @@ public class TreeGame extends SimpleBaseGameActivity implements ITreeMaster {
 
 	private static BranchEntity[][] mBranchMatrix;
 
-	private ITextureRegion
-			mBranch0,
+	private ITiledTextureRegion
+			mBranchRoot,
 			mBranchLeafTextureRegion,
 			mBranchLongTextureRegion,
 			mBranchDoubleEndedTextureRegion,
-			mBranch4,
-			mBranch5;
+			mBranchTripleEndedTextureRegion;
 
 	private Scene mScene;
 	private VertexBufferObjectManager mVertexBufferObjectManager;
+
+	private BranchRoot branchRoot = null;
 
 	@Override
 	protected void onCreateResources() throws IOException {
@@ -48,12 +48,12 @@ public class TreeGame extends SimpleBaseGameActivity implements ITreeMaster {
 
 		this.mVertexBufferObjectManager = this.getVertexBufferObjectManager();
 
-		this.mBitmapTextureAtlas = new BitmapTextureAtlas(this.getTextureManager(), 64, 128, TextureOptions.BILINEAR);
-		this.mBranchLeafTextureRegion = BitmapTextureAtlasTextureRegionFactory.createFromAsset(this.mBitmapTextureAtlas, this, "branch_leaf.png", 0, 0); // 64x32
-		this.mBranchLongTextureRegion = BitmapTextureAtlasTextureRegionFactory.createFromAsset(this.mBitmapTextureAtlas, this, "branch_long.png", 0, 20); // 64x32
-		this.mBranchDoubleEndedTextureRegion = BitmapTextureAtlasTextureRegionFactory.createTiledFromAsset(this.mBitmapTextureAtlas, this, "branch_double_ended.png", 0, 64, 2, 1); // 64x32
-		this.mBranch4 = BitmapTextureAtlasTextureRegionFactory.createTiledFromAsset(this.mBitmapTextureAtlas, this, "face_hexagon_tiled.png", 0, 96, 2, 1); // 64x32
-		this.mBranch5 = BitmapTextureAtlasTextureRegionFactory.createTiledFromAsset(this.mBitmapTextureAtlas, this, "face_hexagon_tiled.png", 0, 96, 2, 1); // 64x32
+		this.mBitmapTextureAtlas = new BitmapTextureAtlas(this.getTextureManager(), 64, 160, TextureOptions.BILINEAR);
+		this.mBranchLeafTextureRegion = BitmapTextureAtlasTextureRegionFactory.createTiledFromAsset(this.mBitmapTextureAtlas, this, "branch_leaf.png", 0, 0, 2, 1); // 32x32
+		this.mBranchLongTextureRegion = BitmapTextureAtlasTextureRegionFactory.createTiledFromAsset(this.mBitmapTextureAtlas, this, "branch_long.png", 0, 32, 2, 1); // 32x32
+		this.mBranchDoubleEndedTextureRegion = BitmapTextureAtlasTextureRegionFactory.createTiledFromAsset(this.mBitmapTextureAtlas, this, "branch_double_ended.png", 0, 64, 2, 1); // 32x32
+		this.mBranchTripleEndedTextureRegion = BitmapTextureAtlasTextureRegionFactory.createTiledFromAsset(this.mBitmapTextureAtlas, this, "branch_triple_ended.png", 0, 96, 2, 1); // 32x32
+		this.mBranchRoot = BitmapTextureAtlasTextureRegionFactory.createTiledFromAsset(this.mBitmapTextureAtlas, this, "branch_root.png", 0, 128, 1, 1); // 32x32
 		this.mBitmapTextureAtlas.load();
 	}
 
@@ -75,66 +75,88 @@ public class TreeGame extends SimpleBaseGameActivity implements ITreeMaster {
 		int columnCount = CAMERA_WIDTH / BranchEntity.BRANCH_WIDTH;
 		mBranchMatrix = new BranchEntity[rowCount][columnCount];
 
+		Random random = new Random();
+
 		for(int i = 0 ; i < rowCount; ++i )
-			for (int j = 0; j < columnCount; ++j ) {
-				mBranchMatrix[i][j] = addBranch(j % 2 == 1 ? BranchType.Leaf : BranchType.LongBranch, j , i );
+			for (int j = 0 ; j < columnCount ; ++j ) {
+				if(i == 4 && j == 4) {
+					mBranchMatrix[i][j] = addBranch(BranchType.Root, j , i, CAMERA_HEIGHT);
+					continue;
+				}
+				mBranchMatrix[i][j] = addBranch(BranchType.values()[random.nextInt(BranchType.values().length - 1) + 1], j , i, CAMERA_HEIGHT );
 			}
 	}
 
-	private BranchEntity addBranch(BranchType branchType, int columnNumber, int rowNumber) {
-
-		ITextureRegion branchTextureRegion = null;
-
-		switch (branchType) {
-			case LongBranch:
-				branchTextureRegion = this.mBranchLongTextureRegion;
-				break;
-			case Leaf:
-				branchTextureRegion = this.mBranchLeafTextureRegion;
-				break;
-		}
-
-		if(branchTextureRegion != null) {
-			BranchEntity branchEntity = createBranchEntity(branchType, columnNumber, rowNumber);
-			this.mScene.registerTouchArea(branchEntity);
-			this.mScene.attachChild(branchEntity);
-			return branchEntity;
-		}
-
-		return null;
+	private BranchEntity addBranch(BranchType branchType, int columnNumber, int rowNumber, int height) {
+		BranchEntity branchEntity = createBranchEntity(branchType, columnNumber, rowNumber, height);
+		this.mScene.registerTouchArea(branchEntity);
+		this.mScene.attachChild(branchEntity);
+		return branchEntity;
 	}
 
 	@Override
 	public EngineOptions onCreateEngineOptions() {
-		Toast.makeText(this, "Touch the screen to add objects.", Toast.LENGTH_LONG).show();
-
 		final Camera camera = new Camera(0, 0, CAMERA_WIDTH, CAMERA_HEIGHT);
 
 		return new EngineOptions(true, ScreenOrientation.LANDSCAPE_FIXED, new RatioResolutionPolicy(CAMERA_WIDTH, CAMERA_HEIGHT), camera);
 	}
 
+	@Override
+	public void onBranchTouched() {
+		deathAllBranches();
+		branchRoot.updateAliveState(BranchEntity.Side.Left);
+	}
 
-	private BranchEntity createBranchEntity(BranchType branchType, int columnNumber, int rowNumber) {
+	private void deathAllBranches() {
+		for(int i = 0 ; i < mBranchMatrix.length; ++i)
+			for (int j = 0; j < mBranchMatrix[i].length; ++j)
+				mBranchMatrix[i][j].setAliveState(false);
+	}
+
+	private BranchEntity createBranchEntity(BranchType branchType, int columnNumber, int rowNumber, int height) {
 		BranchEntity branchEntity = null;
 
 		switch (branchType) {
-
-            case Root: {
-
-            }
-
-			case DoubleEnded:
+            case Root:
+				if(branchRoot == null) {
+					branchRoot = new BranchRoot(
+							columnNumber,
+							rowNumber,
+							height,
+							mBranchRoot, mVertexBufferObjectManager, this);
+					branchEntity = branchRoot;
+					break;
+				}
+			case Leaf:
 				branchEntity = new BranchLeaf(
 						columnNumber,
 						rowNumber,
+						height,
 						mBranchLeafTextureRegion, mVertexBufferObjectManager, this);
 				break;
-			case Leaf:
-				branchEntity = new BranchLeaf(
-				columnNumber,
+			case LongBranch:
+				branchEntity = new BranchLongEnded(
+						columnNumber,
 						rowNumber,
-						mBranchLeafTextureRegion, mVertexBufferObjectManager, this);
+						height,
+						mBranchLongTextureRegion, mVertexBufferObjectManager, this);
 				break;
+			case DoubleEnded:
+				branchEntity = new BranchDoubleEnded(
+						columnNumber,
+						rowNumber,
+						height,
+						mBranchDoubleEndedTextureRegion, mVertexBufferObjectManager, this);
+				break;
+			case TripleEnded:
+				branchEntity = new BranchTripleEnded(
+						columnNumber,
+						rowNumber,
+						height,
+						mBranchTripleEndedTextureRegion, mVertexBufferObjectManager, this);
+				break;
+
+
 		}
 
 		return branchEntity;
@@ -152,7 +174,6 @@ public class TreeGame extends SimpleBaseGameActivity implements ITreeMaster {
 		Leaf,
 		LongBranch,
 		DoubleEnded,
-		TripleEnded,
-		TetraEnded
+		TripleEnded
 	}
 }

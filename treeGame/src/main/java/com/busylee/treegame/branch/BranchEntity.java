@@ -1,19 +1,19 @@
 package com.busylee.treegame.branch;
 
 import com.busylee.treegame.ITreeMaster;
-
-import org.andengine.entity.sprite.Sprite;
+import org.andengine.entity.sprite.TiledSprite;
 import org.andengine.input.touch.TouchEvent;
-import org.andengine.opengl.texture.region.ITextureRegion;
+import org.andengine.opengl.texture.region.ITiledTextureRegion;
 import org.andengine.opengl.vbo.VertexBufferObjectManager;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Created by busylee on 14.02.15.
  */
-public abstract class BranchEntity extends Sprite {
+public abstract class BranchEntity extends TiledSprite {
 
 	public enum Side {
 		Left(new int[] {1 ,0 ,0 ,0}, 0),
@@ -39,6 +39,10 @@ public abstract class BranchEntity extends Sprite {
         public static Side valueOf(int index) {
             return map.get(index);
         }
+
+		public int[] getV() {
+			return this.side;
+		}
 	}
 
 	public static final int BRANCH_WIDTH = 36;
@@ -53,15 +57,15 @@ public abstract class BranchEntity extends Sprite {
 	protected int columnNumber;
 	protected int rowNumber;
 
-    int[] v;
-
 	private ITreeMaster mTreeMaster;
 
-	public BranchEntity(int columnNumber, float rowNumber, ITextureRegion pTextureRegion, VertexBufferObjectManager pVertexBufferObjectManager, ITreeMaster treeMaster) {
+	public BranchEntity(int columnNumber, int rowNumber, int height, ITiledTextureRegion pTextureRegion, VertexBufferObjectManager pVertexBufferObjectManager, ITreeMaster treeMaster) {
 		super(columnNumber * BranchEntity.BRANCH_WIDTH + BranchEntity.BRANCH_WIDTH / 2,
-				rowNumber * BranchEntity.BRANCH_HEIGHT + BranchEntity.BRANCH_HEIGHT / 2,
+				height - rowNumber * BranchEntity.BRANCH_HEIGHT - BranchEntity.BRANCH_HEIGHT / 2,
 				BranchEntity.BRANCH_WIDTH, BranchEntity.BRANCH_WIDTH, pTextureRegion, pVertexBufferObjectManager);
 		mTreeMaster = treeMaster;
+		this.columnNumber = columnNumber;
+		this.rowNumber = rowNumber;
 	}
 
 	@Override
@@ -70,19 +74,40 @@ public abstract class BranchEntity extends Sprite {
 		{
 			this.setRotation((this.getRotation() + DEGREE_90) % DEGREE_360);
 			updateAnchor();
+			mTreeMaster.onBranchTouched();
 		}
 		return true;
 	}
 
 	public void updateAliveState(Side side) {
-        alive = hasConnection(side.side, v);
+		setAliveState(hasConnection(side));
         if(alive) {
-            updateBranch(rowNumber, columnNumber - 1, Side.Left);
-            updateBranch(rowNumber - 1, columnNumber, Side.Top);
-            updateBranch(rowNumber, columnNumber + 1, Side.Right);
-            updateBranch(rowNumber + 1, columnNumber, Side.Bottom);
+			Set<Side> disturbtionSides = getDisturbtion();
+			if(disturbtionSides.contains(Side.Left))
+            	updateBranch(rowNumber, columnNumber - 1, Side.Right);
+			if(disturbtionSides.contains(Side.Top))
+            	updateBranch(rowNumber - 1, columnNumber, Side.Bottom);
+			if(disturbtionSides.contains(Side.Right))
+            	updateBranch(rowNumber, columnNumber + 1, Side.Left);
+			if(disturbtionSides.contains(Side.Bottom))
+            	updateBranch(rowNumber + 1, columnNumber, Side.Top);
         }
     }
+
+	protected abstract HashMap<Side, Set<Side>> getDisturtionTable();
+
+	protected  Set<Side> getDisturbtion() {
+		return getDisturtionTable().get(anchorSide);
+	}
+
+	public void setAliveState(boolean alive) {
+		this.alive = alive;
+		if(alive)
+			setCurrentTileIndex(1);
+		else
+			setCurrentTileIndex(0);
+
+	}
 
     protected void updateBranch(int i, int j, Side side) {
         if(i == rowNumber && j == columnNumber)
@@ -110,13 +135,8 @@ public abstract class BranchEntity extends Sprite {
 		}
 	}
 
-	public static boolean hasConnection(int [] arr1, int [] arr2) {
-
-		for(int i = 0; i < arr1.length; ++i)
-			if(arr1[i] * arr2[i] == 1)
-				return true;
-
-		return false;
+	public boolean hasConnection(Side side) {
+		return getDisturbtion().contains(side);
 	}
 
 	protected BranchEntity getBranch(int i, int j) {

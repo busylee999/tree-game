@@ -1,50 +1,49 @@
 package com.busylee.treegame.branch;
 
 import com.busylee.treegame.ITreeMaster;
-import org.andengine.opengl.texture.region.ITextureRegion;
+import org.andengine.opengl.texture.region.ITiledTextureRegion;
 import org.andengine.opengl.vbo.VertexBufferObjectManager;
 
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Set;
+
 /**
- * Created by busylee on 14.02.15.
+ * Created by busylee on 16.02.15.
  */
 public class BranchDoubleEnded extends BranchEntity {
 
-	private static final int[][] variants = new int[][]{
-            {1, 0, 1, 0},
-            {0, 1, 0, 1},
-    };
+	private static final HashMap<Side, Set<Side>> branchVariants = new HashMap<Side, Set<Side>>();
 
-	public BranchDoubleEnded(int columnNumber, float rowNumber, ITextureRegion pTextureRegion, VertexBufferObjectManager pVertexBufferObjectManager, ITreeMaster treeMaster) {
-		super(columnNumber, rowNumber, pTextureRegion, pVertexBufferObjectManager, treeMaster);
+	static {
+		//branch variants
+		Set<Side> connectSides = new HashSet<Side>();
+		connectSides.add(Side.Left);
+		connectSides.add(Side.Top);
+		branchVariants.put(Side.Left, connectSides);
+
+		connectSides = new HashSet<Side>();
+		connectSides.add(Side.Top);
+		connectSides.add(Side.Right);
+		branchVariants.put(Side.Top, connectSides);
+
+		connectSides = new HashSet<Side>();
+		connectSides.add(Side.Right);
+		connectSides.add(Side.Bottom);
+		branchVariants.put(Side.Right, connectSides);
+
+		connectSides = new HashSet<Side>();
+		connectSides.add(Side.Bottom);
+		connectSides.add(Side.Left);
+		branchVariants.put(Side.Bottom, connectSides);
 	}
 
-    @Override
-    public void updateAliveState(Side side) {
-        alive = hasConnection(side.side, v);
-        if(alive) {
-            if(anchorSide == Side.Left || anchorSide == Side.Right) {
+	public BranchDoubleEnded(int columnNumber, int rowNumber, int height, ITiledTextureRegion pTextureRegion, VertexBufferObjectManager pVertexBufferObjectManager, ITreeMaster treeMaster) {
+		super(columnNumber, rowNumber, height, pTextureRegion, pVertexBufferObjectManager, treeMaster);
+	}
 
-            }
-
-        }
-    }
-
-    @Override
-    protected void updateAnchor() {
-        super.updateAnchor();
-        switch ((int) getRotation() / DEGREE_90) {
-            case 0:
-                v = variants[0];
-                break;
-            case 1:
-                v = variants[1];
-                break;
-            case 2:
-                v = variants[0];
-                break;
-            case 3:
-                v = variants[1];
-                break;
-        }
-    }
+	@Override
+	protected HashMap<Side, Set<Side>> getDisturtionTable() {
+		return branchVariants;
+	}
 }

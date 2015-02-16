@@ -9,4 +9,6 @@ public interface ITreeMaster {
 
 	public BranchEntity getBranch(int i, int j);
 
+	public void onBranchTouched();
+
 }

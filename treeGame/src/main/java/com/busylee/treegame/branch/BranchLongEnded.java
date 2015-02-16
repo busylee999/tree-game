@@ -11,30 +11,34 @@ import java.util.Set;
 /**
  * Created by busylee on 14.02.15.
  */
-public class BranchLeaf extends BranchEntity {
+public class BranchLongEnded extends BranchEntity {
 
 	private static final HashMap<Side, Set<Side>> branchVariants = new HashMap<Side, Set<Side>>();
 
 	static {
-		//trusting
+		//branch variants
 		Set<Side> connectSides = new HashSet<Side>();
 		connectSides.add(Side.Left);
+		connectSides.add(Side.Right);
 		branchVariants.put(Side.Left, connectSides);
 
 		connectSides = new HashSet<Side>();
 		connectSides.add(Side.Top);
+		connectSides.add(Side.Bottom);
 		branchVariants.put(Side.Top, connectSides);
 
 		connectSides = new HashSet<Side>();
 		connectSides.add(Side.Right);
+		connectSides.add(Side.Left);
 		branchVariants.put(Side.Right, connectSides);
 
 		connectSides = new HashSet<Side>();
 		connectSides.add(Side.Bottom);
+		connectSides.add(Side.Top);
 		branchVariants.put(Side.Bottom, connectSides);
 	}
 
-	public BranchLeaf(int columnNumber, int rowNumber, int height, ITiledTextureRegion pTextureRegion, VertexBufferObjectManager pVertexBufferObjectManager, ITreeMaster treeMaster) {
+	public BranchLongEnded(int columnNumber, int rowNumber, int height, ITiledTextureRegion pTextureRegion, VertexBufferObjectManager pVertexBufferObjectManager, ITreeMaster treeMaster) {
 		super(columnNumber, rowNumber, height, pTextureRegion, pVertexBufferObjectManager, treeMaster);
 	}
 
