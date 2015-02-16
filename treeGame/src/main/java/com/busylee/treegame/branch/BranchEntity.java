@@ -1,10 +1,14 @@
 package com.busylee.treegame.branch;
 
 import com.busylee.treegame.ITreeMaster;
+
 import org.andengine.entity.sprite.Sprite;
 import org.andengine.input.touch.TouchEvent;
 import org.andengine.opengl.texture.region.ITextureRegion;
 import org.andengine.opengl.vbo.VertexBufferObjectManager;
+
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * Created by busylee on 14.02.15.
@@ -12,29 +16,44 @@ import org.andengine.opengl.vbo.VertexBufferObjectManager;
 public abstract class BranchEntity extends Sprite {
 
 	public enum Side {
-		Left(new int[] {1 ,0 ,0 ,0}),
-		Top(new int[] {0 ,1 ,0 ,0}),
-		Right(new int[] {0 ,0 ,1 ,0}),
-		Bottom(new int[] {0 ,0 ,0 ,1});
+		Left(new int[] {1 ,0 ,0 ,0}, 0),
+		Top(new int[] {0 ,1 ,0 ,0}, 1),
+		Right(new int[] {0 ,0 ,1 ,0}, 2),
+		Bottom(new int[] {0 ,0 ,0 ,1}, 3);
 
-		Side(int[] sideAnchors) {
-			side = sideAnchors;
+		Side(int[] sideAnchors, int index) {
+			this.side = sideAnchors;
+            this.index = index;
 		}
 
 		public int[] side;
+        public int index;
+
+        public static Map<Integer, Side> map = new HashMap<Integer, Side>();
+
+        static {
+            for(int i = 0; i < Side.values().length; ++i)
+                map.put(Side.values()[i].index, Side.values()[i]);
+        }
+
+        public static Side valueOf(int index) {
+            return map.get(index);
+        }
 	}
 
 	public static final int BRANCH_WIDTH = 36;
 	public static final int BRANCH_HEIGHT = 36;
 
-	private static final int DEGREE_90 = 90;
-	private static final int DEGREE_360 = 360;
+	public static final int DEGREE_90 = 90;
+	public static final int DEGREE_360 = 360;
 
 	protected boolean alive = false;
 	protected Side anchorSide = Side.Left;
 
 	protected int columnNumber;
 	protected int rowNumber;
+
+    int[] v;
 
 	private ITreeMaster mTreeMaster;
 
@@ -55,18 +74,26 @@ public abstract class BranchEntity extends Sprite {
 		return true;
 	}
 
-	public abstract void updateAliveState(Side side);
+	public void updateAliveState(Side side) {
+        alive = hasConnection(side.side, v);
+        if(alive) {
+            updateBranch(rowNumber, columnNumber - 1, Side.Left);
+            updateBranch(rowNumber - 1, columnNumber, Side.Top);
+            updateBranch(rowNumber, columnNumber + 1, Side.Right);
+            updateBranch(rowNumber + 1, columnNumber, Side.Bottom);
+        }
+    }
 
-	protected updateAround() {
+    protected void updateBranch(int i, int j, Side side) {
+        if(i == rowNumber && j == columnNumber)
+            return;
 
-	}
+        BranchEntity branchEntity = getBranch(i, j);
+        if(branchEntity != null && !branchEntity.alive)
+            branchEntity.updateAliveState(side);
+    }
 
-//	protected boolean updateAliveState(BranchEntity branchEntity, Side side) {
-//		alive = branchEntity.isLifeDistributed(side);
-//		return alive;
-//	}
-//
-	private void updateAnchor() {
+	protected void updateAnchor() {
 		switch ((int) getRotation() / DEGREE_90) {
 			case 0:
 				anchorSide = Side.Left;
@@ -82,42 +109,6 @@ public abstract class BranchEntity extends Sprite {
 				break;
 		}
 	}
-//
-//	protected abstract void updateAliveStateLeft();
-//	protected abstract void updateAliveStateTop();
-//	protected abstract void updateAliveStateRight();
-//	protected abstract void updateAliveStateBottom();
-//
-//	public boolean isLifeDistributed(Side side) {
-//		switch (side) {
-//			case Left:
-//				return isLifeDistributedLeft();
-//			case Top:
-//				return isLifeDistributedTop();
-//			case Right:
-//				return isLifeDistributedRight();
-//			case Bottom:
-//				return isLifeDistributedBottom();
-//		}
-//
-//		return false;
-//	}
-//
-//	protected boolean isLifeDistributedLeft() {
-//		return false;
-//	}
-//
-//	protected boolean isLifeDistributedTop() {
-//		return false;
-//	}
-//
-//	protected boolean isLifeDistributedRight() {
-//		return false;
-//	}
-//
-//	protected boolean isLifeDistributedBottom() {
-//		return false;
-//	}
 
 	public static boolean hasConnection(int [] arr1, int [] arr2) {
 

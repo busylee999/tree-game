@@ -118,6 +118,11 @@ public class TreeGame extends SimpleBaseGameActivity implements ITreeMaster {
 		BranchEntity branchEntity = null;
 
 		switch (branchType) {
+
+            case Root: {
+
+            }
+
 			case DoubleEnded:
 				branchEntity = new BranchLeaf(
 						columnNumber,
