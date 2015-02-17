@@ -45,8 +45,8 @@ public abstract class BranchEntity extends TiledSprite {
 		}
 	}
 
-	public static final int BRANCH_WIDTH = 36;
-	public static final int BRANCH_HEIGHT = 36;
+	public static final int BRANCH_WIDTH = 50;
+	public static final int BRANCH_HEIGHT = 50;
 
 	public static final int DEGREE_90 = 90;
 	public static final int DEGREE_360 = 360;
@@ -77,6 +77,10 @@ public abstract class BranchEntity extends TiledSprite {
 			mTreeMaster.onBranchTouched();
 		}
 		return true;
+	}
+
+	public boolean isAlive() {
+		return alive;
 	}
 
 	public void updateAliveState(Side side) {

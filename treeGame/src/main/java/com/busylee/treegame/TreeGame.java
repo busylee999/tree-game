@@ -1,5 +1,6 @@
 package com.busylee.treegame;
 
+import android.widget.Toast;
 import com.busylee.treegame.branch.*;
 import org.andengine.engine.camera.Camera;
 import org.andengine.engine.options.EngineOptions;
@@ -14,6 +15,7 @@ import org.andengine.opengl.texture.atlas.bitmap.BitmapTextureAtlasTextureRegion
 import org.andengine.opengl.texture.region.ITiledTextureRegion;
 import org.andengine.opengl.vbo.VertexBufferObjectManager;
 import org.andengine.ui.activity.SimpleBaseGameActivity;
+import org.andengine.util.math.MathUtils;
 
 import java.io.IOException;
 import java.util.Random;
@@ -28,10 +30,12 @@ public class TreeGame extends SimpleBaseGameActivity implements ITreeMaster {
 
 	private BitmapTextureAtlas mBitmapTextureAtlas;
 
-	private static BranchEntity[][] mBranchMatrix;
+	private BranchEntity[][] mBranchMatrix;
+
+	int[][] resultMatrix;
 
 	private ITiledTextureRegion
-			mBranchRoot,
+			mBranchRootTextureRegion,
 			mBranchLeafTextureRegion,
 			mBranchLongTextureRegion,
 			mBranchDoubleEndedTextureRegion,
@@ -53,7 +57,7 @@ public class TreeGame extends SimpleBaseGameActivity implements ITreeMaster {
 		this.mBranchLongTextureRegion = BitmapTextureAtlasTextureRegionFactory.createTiledFromAsset(this.mBitmapTextureAtlas, this, "branch_long.png", 0, 32, 2, 1); // 32x32
 		this.mBranchDoubleEndedTextureRegion = BitmapTextureAtlasTextureRegionFactory.createTiledFromAsset(this.mBitmapTextureAtlas, this, "branch_double_ended.png", 0, 64, 2, 1); // 32x32
 		this.mBranchTripleEndedTextureRegion = BitmapTextureAtlasTextureRegionFactory.createTiledFromAsset(this.mBitmapTextureAtlas, this, "branch_triple_ended.png", 0, 96, 2, 1); // 32x32
-		this.mBranchRoot = BitmapTextureAtlasTextureRegionFactory.createTiledFromAsset(this.mBitmapTextureAtlas, this, "branch_root.png", 0, 128, 1, 1); // 32x32
+		this.mBranchRootTextureRegion = BitmapTextureAtlasTextureRegionFactory.createTiledFromAsset(this.mBitmapTextureAtlas, this, "branch_root.png", 0, 128, 1, 1); // 32x32
 		this.mBitmapTextureAtlas.load();
 	}
 
@@ -71,20 +75,132 @@ public class TreeGame extends SimpleBaseGameActivity implements ITreeMaster {
 
 	private void showTree() {
 
-		int rowCount = CAMERA_HEIGHT / BranchEntity.BRANCH_HEIGHT;
-		int columnCount = CAMERA_WIDTH / BranchEntity.BRANCH_WIDTH;
+		int rowCount = 3;
+		int columnCount = 3;
+
 		mBranchMatrix = new BranchEntity[rowCount][columnCount];
 
-		Random random = new Random();
+		generateLevelMatrix(rowCount, columnCount);
+
+		BranchType branchType = BranchType.Root;
+
+		System.out.print("branches: \n");
 
 		for(int i = 0 ; i < rowCount; ++i )
 			for (int j = 0 ; j < columnCount ; ++j ) {
-				if(i == 4 && j == 4) {
-					mBranchMatrix[i][j] = addBranch(BranchType.Root, j , i, CAMERA_HEIGHT);
-					continue;
+				int vertNumber = i * rowCount + j;
+				int summ = MathUtils.sum(resultMatrix[vertNumber]);
+
+				if(summ == 1)
+					branchType = BranchType.Leaf;
+				else if(summ == 3)
+					branchType = BranchType.TripleEnded;
+				else if (summ == 2) {
+					branchType = BranchType.DoubleEnded;
+					if(j > 0 && j + 1  < columnCount)
+						if(resultMatrix[vertNumber][vertNumber - 1] == 1 && resultMatrix[vertNumber][vertNumber + 1] == 1)
+							branchType = BranchType.LongBranch;
+
+					if(i > 0 && i + 1 < rowCount)
+						if(resultMatrix[vertNumber][vertNumber - columnCount] == 1 && resultMatrix[vertNumber][vertNumber + columnCount] == 1)
+							branchType = BranchType.LongBranch;
 				}
-				mBranchMatrix[i][j] = addBranch(BranchType.values()[random.nextInt(BranchType.values().length - 1) + 1], j , i, CAMERA_HEIGHT );
+
+				System.out.print(vertNumber + " => " + branchType + "(" + summ +")\n");
+
+				mBranchMatrix[i][j] = addBranch(branchType, j , i, CAMERA_HEIGHT );
 			}
+	}
+
+	private void fill(int[] arr, int value) {
+		for(int i = 0; i < arr.length; ++i)
+			arr[i] = value;
+	}
+
+	private void generateLevelMatrix(int rowCount, int columnCount) {
+		int verticiesCount = rowCount * columnCount;
+
+		int INF = Integer.MAX_VALUE / 2;
+
+		int[][] matrix = new int[verticiesCount][verticiesCount];
+		resultMatrix = new int[verticiesCount][verticiesCount];
+
+		int[] treeEdges = new int[verticiesCount];
+
+		Random random = new Random(System.currentTimeMillis());
+
+		for(int i = 0 ; i < verticiesCount; ++i)
+			for (int j = 0; j < verticiesCount; ++j) {
+				matrix[i][j] = INF;
+				int count = 0;
+				if(i - 1 >= 0 && i % columnCount != 0) {
+					matrix[i][i - 1] = random.nextInt(10) + 1;
+					count++;
+				}
+				if(i + 1 <verticiesCount && i % columnCount != columnCount - 1) {
+					matrix[i][i + 1] = random.nextInt(10) + 1;
+					count++;
+				}
+				if(i + rowCount < verticiesCount) {
+					matrix[i][i + rowCount] = random.nextInt(10) + 1;
+					count++;
+				}
+				if(i - rowCount >= 0 && count < 3)
+					matrix[i][i - rowCount] = random.nextInt(10) + 1;
+			}
+
+		System.out.print("matrix: \n");
+
+		StringBuilder sb = new StringBuilder();
+		for( int i = 0; i < verticiesCount; ++i) {
+			sb.setLength(0);
+			for (int j = 0; j < verticiesCount; ++j) {
+				sb.append(matrix[i][j]);
+				sb.append(" ");
+			}
+			System.out.print(sb.toString() + "\n");
+		}
+
+		boolean[] used = new boolean [verticiesCount]; // массив помето
+		int[] dist = new int [verticiesCount]; // массив расстояния. dist[v] = вес_ребра(MST, v)
+		fill(dist, INF); // устанаавливаем расстояние до всех вершин INF
+		dist[0] = 0; // для начальной вершины положим 0
+
+		int[] s = new int[verticiesCount];
+
+		for (;;) {
+			int v = -1;
+			for (int nv = 0; nv < verticiesCount; nv++) // перебираем вершины
+				if (!used[nv] && dist[nv] < INF && (v == -1 || dist[v] > dist[nv])) { // выбираем самую близкую непомеченную вершину
+					v = nv;
+				}
+			if (v == -1) break; // ближайшая вершина не найдена
+			used[v] = true; // помечаем ее
+			for (int to = 0; to < verticiesCount; to++)
+				if (!used[to] && matrix[v][to] < INF) { // для всех непомеченных смежных
+					if(dist[to] > matrix[v][to]) {
+						dist[to] = matrix[v][to]; // улучшаем оценку расстояния (релаксация)
+						treeEdges[to] = v;
+					}
+				}
+			}
+
+		System.out.print("result edges: \n");
+
+		sb.setLength(0);
+		for (int j = 0; j < verticiesCount; ++j) {
+			sb.append(j + " => ");
+			sb.append(treeEdges[j]);
+			sb.append("\n");
+		}
+		System.out.print(sb.toString() + "\n");
+
+		for(int i = 0; i < verticiesCount; ++i)
+			if(treeEdges[i] != i) {
+				resultMatrix[i][treeEdges[i]] = 1;
+				resultMatrix[treeEdges[i]][i] = 1;
+			}
+
 	}
 
 	private BranchEntity addBranch(BranchType branchType, int columnNumber, int rowNumber, int height) {
@@ -105,6 +221,33 @@ public class TreeGame extends SimpleBaseGameActivity implements ITreeMaster {
 	public void onBranchTouched() {
 		deathAllBranches();
 		branchRoot.updateAliveState(BranchEntity.Side.Left);
+
+		//todo
+		if(checkWin()) {
+			runOnUiThread(new Runnable() {
+				@Override
+				public void run() {
+					Toast.makeText(TreeGame.this, "You win!!!", Toast.LENGTH_SHORT).show();
+				}
+			});
+			restartGame();
+		}
+
+	}
+
+	private void restartGame() {
+		branchRoot = null;
+		removeTree();
+		showTree();
+	}
+
+	private void removeTree() {
+		for(int i = 0 ; i < mBranchMatrix.length; ++i)
+			for (int j = 0; j < mBranchMatrix[i].length; ++j) {
+				mScene.unregisterTouchArea(mBranchMatrix[i][j]);
+				mBranchMatrix[i][j].detachSelf();
+				mBranchMatrix[i][j].dispose();
+			}
 	}
 
 	private void deathAllBranches() {
@@ -113,21 +256,31 @@ public class TreeGame extends SimpleBaseGameActivity implements ITreeMaster {
 				mBranchMatrix[i][j].setAliveState(false);
 	}
 
+	private boolean checkWin() {
+		for(int i = 0 ; i < mBranchMatrix.length; ++i)
+			for (int j = 0; j < mBranchMatrix[i].length; ++j)
+				if(!mBranchMatrix[i][j].isAlive())
+					return false;
+
+		return true;
+	}
+
 	private BranchEntity createBranchEntity(BranchType branchType, int columnNumber, int rowNumber, int height) {
 		BranchEntity branchEntity = null;
 
 		switch (branchType) {
             case Root:
+			case Leaf:
 				if(branchRoot == null) {
 					branchRoot = new BranchRoot(
 							columnNumber,
 							rowNumber,
 							height,
-							mBranchRoot, mVertexBufferObjectManager, this);
+							mBranchRootTextureRegion, mVertexBufferObjectManager, this);
 					branchEntity = branchRoot;
 					break;
 				}
-			case Leaf:
+
 				branchEntity = new BranchLeaf(
 						columnNumber,
 						rowNumber,
