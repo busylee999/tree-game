@@ -167,8 +167,16 @@ public class TreeGame extends SimpleBaseGameActivity implements ITreeMaster {
 				mBranchCorrectAnswer[i][j] = branchCorrectSide;
 			}
 
+		shakeTree(rowCount, columnCount);
+
 		branchRoot.updateAliveState(BranchEntity.Side.Left);
 
+	}
+
+	private void shakeTree(int rowCount, int columnCount) {
+		for(int i = 0; i < rowCount; ++i)
+			for(int j = 0; j < columnCount; ++j)
+				mBranchMatrix[i][j].setAnchorSide(BranchEntity.Side.valueOf(RANDOM.nextInt(4)));
 	}
 
 	private void showCorrectAnswer(int rowCount, int columnCount) {
