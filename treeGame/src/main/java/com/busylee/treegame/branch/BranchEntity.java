@@ -68,6 +68,24 @@ public abstract class BranchEntity extends TiledSprite {
 		this.rowNumber = rowNumber;
 	}
 
+	public void setAnchorSide(Side side) {
+		anchorSide = side;
+		switch (anchorSide) {
+			case Left:
+				setRotation(0);
+				break;
+			case Top:
+				setRotation(90);
+				break;
+			case Right:
+				setRotation(180);
+				break;
+			case Bottom:
+				setRotation(270);
+				break;
+		}
+	}
+
 	@Override
 	public boolean onAreaTouched(TouchEvent pSceneTouchEvent, float pTouchAreaLocalX, float pTouchAreaLocalY) {
 		if (pSceneTouchEvent.isActionUp())
