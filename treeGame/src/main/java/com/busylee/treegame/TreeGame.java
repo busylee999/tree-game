@@ -103,8 +103,6 @@ public class TreeGame extends SimpleBaseGameActivity implements ITreeMaster {
 		BranchType branchType = BranchType.Root;
 		BranchEntity.Side branchCorrectSide = BranchEntity.Side.Left;
 
-		System.out.print("branches: \n");
-
 		for(int i = 0 ; i < rowCount; ++i )
 			for (int j = 0 ; j < columnCount ; ++j ) {
 				int vertexNumber = i * columnCount + j;
@@ -165,19 +163,20 @@ public class TreeGame extends SimpleBaseGameActivity implements ITreeMaster {
 
 				}
 
-				System.out.print(vertexNumber + " => " + branchType + "(" + summ + ")\n");
-
 				mBranchMatrix[i][j] = addBranch(branchType, j , i, CAMERA_HEIGHT );
 				mBranchCorrectAnswer[i][j] = branchCorrectSide;
 			}
 
-		showCorrectAnswer(rowCount, columnCount);
+		branchRoot.updateAliveState(BranchEntity.Side.Left);
+
 	}
 
 	private void showCorrectAnswer(int rowCount, int columnCount) {
 		for(int i = 0; i < rowCount; ++i)
 			for(int j = 0; j < columnCount; ++j)
 				mBranchMatrix[i][j].setAnchorSide(mBranchCorrectAnswer[i][j]);
+
+		branchRoot.updateAliveState(BranchEntity.Side.Left);
 	}
 
 	private void fill(int[] arr, int value) {
@@ -190,6 +189,7 @@ public class TreeGame extends SimpleBaseGameActivity implements ITreeMaster {
 	}
 
 	private void generateLevelMatrix(int rowCount, int columnCount) {
+		boolean showLog = false;
 		int verticesCount = rowCount * columnCount;
 
 		final int INF = Integer.MAX_VALUE / 2;
@@ -208,35 +208,38 @@ public class TreeGame extends SimpleBaseGameActivity implements ITreeMaster {
 		}
 
 		for(int i = 0 ; i < verticesCount; ++i){
-				if(i - 1 >= 0 && i % columnCount != 0)
-					matrix[i][i - 1] = getRandom();
+			if(i - 1 >= 0 && i % columnCount != 0)
+				matrix[i][i - 1] = getRandom();
 
-				if(i + 1 <verticesCount && i % columnCount != columnCount - 1)
-					matrix[i][i + 1] = getRandom();
+			if(i + 1 <verticesCount && i % columnCount != columnCount - 1)
+				matrix[i][i + 1] = getRandom();
 
-				if(i + columnCount < verticesCount)
-					matrix[i][i + columnCount] = getRandom();
+			if(i + columnCount < verticesCount)
+				matrix[i][i + columnCount] = getRandom();
 
-				if(i - columnCount >= 0)
-					matrix[i][i - columnCount] = getRandom();
-			}
-
-		System.out.print("matrix: \n");
-
-		StringBuilder sb = new StringBuilder();
-		for( int i = 0; i < verticesCount; ++i) {
-			sb.setLength(0);
-			for (int j = 0; j < verticesCount; ++j) {
-				if(matrix[i][j] == INF)
-					sb.append(0);
-				else
-					sb.append(matrix[i][j]);
-				sb.append(" ");
-			}
-			System.out.print(sb.toString() + "\n");
+			if(i - columnCount >= 0)
+				matrix[i][i - columnCount] = getRandom();
 		}
 
-		boolean[] used = new boolean [verticesCount]; // массив помето
+		if(showLog) {
+			System.out.print("matrix: \n");
+
+			StringBuilder sb = new StringBuilder();
+			for( int i = 0; i < verticesCount; ++i) {
+				sb.setLength(0);
+				for (int j = 0; j < verticesCount; ++j) {
+					if(matrix[i][j] == INF)
+						sb.append(0);
+					else
+						sb.append(matrix[i][j]);
+					sb.append(" ");
+				}
+				System.out.print(sb.toString() + "\n");
+			}
+
+		}
+
+		boolean[] used = new boolean [verticesCount]; // массив пометок
 		int[] dist = new int [verticesCount]; // массив расстояния. dist[v] = вес_ребра(MST, v)
 		fill(dist, INF); // устанаавливаем расстояние до всех вершин INF
 		int startVertexNumber = 0;//(columnCount + rowCount) / 9;
@@ -266,26 +269,31 @@ public class TreeGame extends SimpleBaseGameActivity implements ITreeMaster {
 			}
 		}
 
-		System.out.print("result edges degrees: \n");
-		for(int i =0; i< verticesCount; ++i) {
-			if (edgesDegrees[i] == -1) {
-				edgesDegrees[i] = 0;
-			}
-			System.out.println(i + " => " + edgesDegrees[i]);
-		}
+		if(showLog) {
+			StringBuilder sb = new StringBuilder();
 
-		System.out.print("result edges: \n");
-		sb.setLength(0);
-		for (int j = 0; j < verticesCount; ++j) {
-			sb.append(j + " => ");
-			if(treeEdges[j] == -1) {
-				System.out.print("tree not found restart: \n");
-				generateLevelMatrix(rowCount, columnCount);
+			System.out.print("result edges degrees: \n");
+			for(int i =0; i< verticesCount; ++i) {
+				if (edgesDegrees[i] == -1) {
+					edgesDegrees[i] = 0;
+				}
+				System.out.println(i + " => " + edgesDegrees[i]);
 			}
-			sb.append(treeEdges[j]);
-			sb.append("\n");
+
+			System.out.print("result edges: \n");
+			sb.setLength(0);
+			for (int j = 0; j < verticesCount; ++j) {
+				sb.append(j);
+				sb.append(" => ");
+				if(treeEdges[j] == -1) {
+					System.out.print("tree not found restart: \n");
+					generateLevelMatrix(rowCount, columnCount);
+				}
+				sb.append(treeEdges[j]);
+				sb.append("\n");
+			}
+			System.out.print(sb.toString() + "\n");
 		}
-		System.out.print(sb.toString() + "\n");
 
 		for(int i = 0; i < verticesCount; ++i)
 			if(treeEdges[i] != i) {
@@ -293,19 +301,22 @@ public class TreeGame extends SimpleBaseGameActivity implements ITreeMaster {
 				resultMatrix[treeEdges[i]][i] = 1;
 			}
 
-		for( int i = 0; i < verticesCount; ++i) {
-			sb.setLength(0);
-			for (int j = 0; j < verticesCount; ++j) {
-				sb.append(resultMatrix[i][j]);
+		if(showLog) {
+			StringBuilder sb = new StringBuilder();
+			for( int i = 0; i < verticesCount; ++i) {
+				sb.setLength(0);
+				for (int j = 0; j < verticesCount; ++j) {
+					sb.append(resultMatrix[i][j]);
+				}
+				System.out.print(sb.toString() + "\n");
 			}
-			System.out.print(sb.toString() + "\n");
 		}
 
 	}
 
 	private BranchEntity addBranch(BranchType branchType, int columnNumber, int rowNumber, int height) {
 		BranchEntity branchEntity = createBranchEntity(branchType, columnNumber, rowNumber, height);
-//		this.mScene.registerTouchArea(branchEntity);
+		this.mScene.registerTouchArea(branchEntity);
 		this.mScene.attachChild(branchEntity);
 		return branchEntity;
 	}
