@@ -1,6 +1,8 @@
 package com.busylee.treegame.branch;
 
 import com.busylee.treegame.ITreeMaster;
+import com.busylee.treegame.TreePosition;
+
 import org.andengine.entity.sprite.TiledSprite;
 import org.andengine.input.touch.TouchEvent;
 import org.andengine.opengl.texture.region.ITiledTextureRegion;
@@ -59,9 +61,9 @@ public abstract class BranchEntity extends TiledSprite {
 
 	private ITreeMaster mTreeMaster;
 
-	public BranchEntity(int columnNumber, int rowNumber, int height, ITiledTextureRegion pTextureRegion, VertexBufferObjectManager pVertexBufferObjectManager, ITreeMaster treeMaster) {
-		super(columnNumber * BranchEntity.BRANCH_WIDTH + BranchEntity.BRANCH_WIDTH / 2,
-				height - rowNumber * BranchEntity.BRANCH_HEIGHT - BranchEntity.BRANCH_HEIGHT / 2,
+	public BranchEntity(int columnNumber, int rowNumber, TreePosition treePosition, ITiledTextureRegion pTextureRegion, VertexBufferObjectManager pVertexBufferObjectManager, ITreeMaster treeMaster) {
+		super(treePosition.xFrom + columnNumber * BranchEntity.BRANCH_WIDTH + BranchEntity.BRANCH_WIDTH / 2,
+				treePosition.yFrom - rowNumber * BranchEntity.BRANCH_HEIGHT - BranchEntity.BRANCH_HEIGHT / 2,
 				BranchEntity.BRANCH_WIDTH, BranchEntity.BRANCH_WIDTH, pTextureRegion, pVertexBufferObjectManager);
 		mTreeMaster = treeMaster;
 		this.columnNumber = columnNumber;

@@ -178,8 +178,15 @@ public class TreeGame extends SimpleBaseGameActivity implements ITreeMaster, Men
 
 	private void showTree() {
 
-		int rowCount = CAMERA_HEIGHT / BranchEntity.BRANCH_HEIGHT;
+        final int scoreHeight = 40;
+
+		int rowCount = ( CAMERA_HEIGHT - scoreHeight ) / BranchEntity.BRANCH_HEIGHT;
 		int columnCount = CAMERA_WIDTH / BranchEntity.BRANCH_WIDTH;
+
+        TreePosition treePosition = new TreePosition();
+        treePosition.yFrom = rowCount * BranchEntity.BRANCH_HEIGHT +
+                ( ( CAMERA_HEIGHT - scoreHeight ) - rowCount * BranchEntity.BRANCH_HEIGHT ) / 2;
+        treePosition.xFrom = (CAMERA_WIDTH - columnCount * BranchEntity.BRANCH_WIDTH ) / 2;
 
 		int vertexCount = rowCount * columnCount;
 
@@ -251,7 +258,7 @@ public class TreeGame extends SimpleBaseGameActivity implements ITreeMaster, Men
 
 				}
 
-				mBranchMatrix[i][j] = addBranch(branchType, j , i, CAMERA_HEIGHT);
+				mBranchMatrix[i][j] = addBranch(branchType, j , i, treePosition);
 				mBranchCorrectAnswer[i][j] = branchCorrectSide;
 			}
 
@@ -276,8 +283,8 @@ public class TreeGame extends SimpleBaseGameActivity implements ITreeMaster, Men
         mBranchRoot.updateAliveState(BranchEntity.Side.Left);
     }
 
-	private BranchEntity addBranch(BranchType branchType, int columnNumber, int rowNumber, int height) {
-		BranchEntity branchEntity = createBranchEntity(branchType, columnNumber, rowNumber, height);
+	private BranchEntity addBranch(BranchType branchType, int columnNumber, int rowNumber, TreePosition treePosition) {
+		BranchEntity branchEntity = createBranchEntity(branchType, columnNumber, rowNumber, treePosition);
 		this.mGameScene.registerTouchArea(branchEntity);
 		this.mGameScene.attachChild(branchEntity);
 		return branchEntity;
@@ -332,7 +339,7 @@ public class TreeGame extends SimpleBaseGameActivity implements ITreeMaster, Men
 		return true;
 	}
 
-	private BranchEntity createBranchEntity(BranchType branchType, int columnNumber, int rowNumber, int height) {
+	private BranchEntity createBranchEntity(BranchType branchType, int columnNumber, int rowNumber, TreePosition treePosition) {
 		BranchEntity branchEntity = null;
 
 		switch (branchType) {
@@ -342,7 +349,7 @@ public class TreeGame extends SimpleBaseGameActivity implements ITreeMaster, Men
 					mBranchRoot = new BranchRoot(
 							columnNumber,
 							rowNumber,
-							height,
+                            treePosition,
 							mBranchRootTextureRegion, mVertexBufferObjectManager, this);
 					branchEntity = mBranchRoot;
 					break;
@@ -351,28 +358,28 @@ public class TreeGame extends SimpleBaseGameActivity implements ITreeMaster, Men
 				branchEntity = new BranchLeaf(
 						columnNumber,
 						rowNumber,
-						height,
+                        treePosition,
 						mBranchLeafTextureRegion, mVertexBufferObjectManager, this);
 				break;
 			case LongBranch:
 				branchEntity = new BranchLongEnded(
 						columnNumber,
 						rowNumber,
-						height,
+                        treePosition,
 						mBranchLongTextureRegion, mVertexBufferObjectManager, this);
 				break;
 			case DoubleEnded:
 				branchEntity = new BranchDoubleEnded(
 						columnNumber,
 						rowNumber,
-						height,
+                        treePosition,
 						mBranchDoubleEndedTextureRegion, mVertexBufferObjectManager, this);
 				break;
 			case TripleEnded:
 				branchEntity = new BranchTripleEnded(
 						columnNumber,
 						rowNumber,
-						height,
+                        treePosition,
 						mBranchTripleEndedTextureRegion, mVertexBufferObjectManager, this);
 				break;
 

@@ -1,6 +1,8 @@
 package com.busylee.treegame.branch;
 
 import com.busylee.treegame.ITreeMaster;
+import com.busylee.treegame.TreePosition;
+
 import org.andengine.opengl.texture.region.ITiledTextureRegion;
 import org.andengine.opengl.vbo.VertexBufferObjectManager;
 
@@ -38,8 +40,8 @@ public class BranchDoubleEnded extends BranchEntity {
 		branchVariants.put(Side.Bottom, connectSides);
 	}
 
-	public BranchDoubleEnded(int columnNumber, int rowNumber, int height, ITiledTextureRegion pTextureRegion, VertexBufferObjectManager pVertexBufferObjectManager, ITreeMaster treeMaster) {
-		super(columnNumber, rowNumber, height, pTextureRegion, pVertexBufferObjectManager, treeMaster);
+	public BranchDoubleEnded(int columnNumber, int rowNumber, TreePosition treePosition, ITiledTextureRegion pTextureRegion, VertexBufferObjectManager pVertexBufferObjectManager, ITreeMaster treeMaster) {
+		super(columnNumber, rowNumber, treePosition, pTextureRegion, pVertexBufferObjectManager, treeMaster);
 	}
 
 	@Override
