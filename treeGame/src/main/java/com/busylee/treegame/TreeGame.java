@@ -49,18 +49,12 @@ public class TreeGame extends SimpleBaseGameActivity implements ITreeMaster, Men
 
     // ===========================================================
     // Fields
-    // ===========================================================
-
-	final Random RANDOM = new Random(System.currentTimeMillis());
-	final int RANDOM_START = 1;
-	final int RANDOM_STOP = 100;
+    // ===========================================================3
 
 	private BitmapTextureAtlas mBitmapTextureAtlas;
 
 	private BranchEntity[][] mBranchMatrix;
 	private BranchEntity.Side[][] mBranchCorrectAnswer;
-
-	int[][] resultMatrix;
 
 	private ITiledTextureRegion
 			mBranchRootTextureRegion,
@@ -140,6 +134,13 @@ public class TreeGame extends SimpleBaseGameActivity implements ITreeMaster, Men
         }
     }
 
+    @Override
+    protected void onPause() {
+        super.onPause();
+
+        showMenu();
+    }
+
     // ===========================================================
     // Game methods
     // ===========================================================
@@ -177,7 +178,7 @@ public class TreeGame extends SimpleBaseGameActivity implements ITreeMaster, Men
 		mBranchMatrix = new BranchEntity[rowCount][columnCount];
 		mBranchCorrectAnswer = new BranchEntity.Side[rowCount][columnCount];
 
-		generateLevelMatrix(rowCount, columnCount);
+        int[][] levelMatrix = LevelMatrixGenerator.generateLevelMatrix(rowCount, columnCount);
 
 		BranchType branchType = BranchType.Root;
 		BranchEntity.Side branchCorrectSide = BranchEntity.Side.Left;
@@ -185,56 +186,56 @@ public class TreeGame extends SimpleBaseGameActivity implements ITreeMaster, Men
 		for(int i = 0 ; i < rowCount; ++i )
 			for (int j = 0 ; j < columnCount ; ++j ) {
 				int vertexNumber = i * columnCount + j;
-				int summ = MathUtils.sum(resultMatrix[vertexNumber]);
+				int summ = MathUtils.sum(levelMatrix[vertexNumber]);
 
 				if(summ == 1) {
 					branchType = BranchType.Leaf;
-					if(vertexNumber != 0 && resultMatrix[vertexNumber][vertexNumber - 1] == 1)
+					if(vertexNumber != 0 && levelMatrix[vertexNumber][vertexNumber - 1] == 1)
 						branchCorrectSide = BranchEntity.Side.Left;
-					else if( vertexNumber < vertexCount - 1 && resultMatrix[vertexNumber][vertexNumber + 1] == 1)
+					else if( vertexNumber < vertexCount - 1 && levelMatrix[vertexNumber][vertexNumber + 1] == 1)
 						branchCorrectSide = BranchEntity.Side.Right;
-					else if(i > 0 && resultMatrix[vertexNumber][vertexNumber - columnCount] == 1)
+					else if(i > 0 && levelMatrix[vertexNumber][vertexNumber - columnCount] == 1)
 						branchCorrectSide = BranchEntity.Side.Top;
-					else if(i < rowCount - 1 && resultMatrix[vertexNumber][vertexNumber + columnCount] == 1)
+					else if(i < rowCount - 1 && levelMatrix[vertexNumber][vertexNumber + columnCount] == 1)
 						branchCorrectSide = BranchEntity.Side.Bottom;
 				}
 				else if(summ == 3) {
 					branchType = BranchType.TripleEnded;
-					if(i == 0 || i > 0 && resultMatrix[vertexNumber][vertexNumber - columnCount] == 0)
+					if(i == 0 || i > 0 && levelMatrix[vertexNumber][vertexNumber - columnCount] == 0)
 						branchCorrectSide = BranchEntity.Side.Right;
-					else if(i == rowCount - 1 || i < rowCount - 1 && resultMatrix[vertexNumber][vertexNumber + columnCount] == 0)
+					else if(i == rowCount - 1 || i < rowCount - 1 && levelMatrix[vertexNumber][vertexNumber + columnCount] == 0)
 						branchCorrectSide = BranchEntity.Side.Left;
-					else if(resultMatrix[vertexNumber][vertexNumber - 1] == 0)
+					else if(levelMatrix[vertexNumber][vertexNumber - 1] == 0)
 						branchCorrectSide = BranchEntity.Side.Top;
-					else if(resultMatrix[vertexNumber][vertexNumber + 1] == 0)
+					else if(levelMatrix[vertexNumber][vertexNumber + 1] == 0)
 						branchCorrectSide = BranchEntity.Side.Bottom;
 				}
 				else if (summ == 2) {
 					branchType = BranchType.DoubleEnded;
 					if(vertexNumber == 0
-							|| ( i==0 && resultMatrix[vertexNumber][vertexNumber + 1] == 1)
-							|| ( i < rowCount - 1 && resultMatrix[vertexNumber][vertexNumber + 1] == 1 && resultMatrix[vertexNumber][vertexNumber + columnCount] == 1))
+							|| ( i==0 && levelMatrix[vertexNumber][vertexNumber + 1] == 1)
+							|| ( i < rowCount - 1 && levelMatrix[vertexNumber][vertexNumber + 1] == 1 && levelMatrix[vertexNumber][vertexNumber + columnCount] == 1))
 						branchCorrectSide = BranchEntity.Side.Right;
 					else if(vertexNumber == vertexCount - 1
-							|| ( i > 0 && resultMatrix[vertexNumber][vertexNumber - 1] == 1 && resultMatrix[vertexNumber][vertexNumber - columnCount] == 1)
-							|| ( i == rowCount - 1 && resultMatrix[vertexNumber][vertexNumber - 1] == 1))
+							|| ( i > 0 && levelMatrix[vertexNumber][vertexNumber - 1] == 1 && levelMatrix[vertexNumber][vertexNumber - columnCount] == 1)
+							|| ( i == rowCount - 1 && levelMatrix[vertexNumber][vertexNumber - 1] == 1))
 						branchCorrectSide = BranchEntity.Side.Left;
-					else if ( (i > 0 && resultMatrix[vertexNumber][vertexNumber + 1] == 1 && resultMatrix[vertexNumber][vertexNumber - columnCount] == 1)
-							|| ( i == rowCount - 1 && resultMatrix[vertexNumber][vertexNumber + 1] == 1))
+					else if ( (i > 0 && levelMatrix[vertexNumber][vertexNumber + 1] == 1 && levelMatrix[vertexNumber][vertexNumber - columnCount] == 1)
+							|| ( i == rowCount - 1 && levelMatrix[vertexNumber][vertexNumber + 1] == 1))
 						branchCorrectSide = BranchEntity.Side.Top;
-					else if (( i==0 && resultMatrix[vertexNumber][vertexNumber - 1] == 1)
-							|| ( i < rowCount - 1 && resultMatrix[vertexNumber][vertexNumber - 1] == 1 && resultMatrix[vertexNumber][vertexNumber + columnCount] == 1))
+					else if (( i==0 && levelMatrix[vertexNumber][vertexNumber - 1] == 1)
+							|| ( i < rowCount - 1 && levelMatrix[vertexNumber][vertexNumber - 1] == 1 && levelMatrix[vertexNumber][vertexNumber + columnCount] == 1))
 						branchCorrectSide = BranchEntity.Side.Bottom;
 
 					if(j > 0 && j + 1  < columnCount) {
-						if (resultMatrix[vertexNumber][vertexNumber - 1] == 1 && resultMatrix[vertexNumber][vertexNumber + 1] == 1) {
+						if (levelMatrix[vertexNumber][vertexNumber - 1] == 1 && levelMatrix[vertexNumber][vertexNumber + 1] == 1) {
 							branchType = BranchType.LongBranch;
 							branchCorrectSide = BranchEntity.Side.Left;
 						}
 					}
 
 					if(i > 0 && i + 1 < rowCount) {
-						if (resultMatrix[vertexNumber - columnCount][vertexNumber] == 1 && resultMatrix[vertexNumber + columnCount][vertexNumber] == 1) {
+						if (levelMatrix[vertexNumber - columnCount][vertexNumber] == 1 && levelMatrix[vertexNumber + columnCount][vertexNumber] == 1) {
 							branchType = BranchType.LongBranch;
 							branchCorrectSide = BranchEntity.Side.Top;
 						}
@@ -253,153 +254,19 @@ public class TreeGame extends SimpleBaseGameActivity implements ITreeMaster, Men
 	}
 
 	private void shakeTree(int rowCount, int columnCount) {
+        final Random random = new Random(System.currentTimeMillis());
 		for(int i = 0; i < rowCount; ++i)
 			for(int j = 0; j < columnCount; ++j)
-				mBranchMatrix[i][j].setAnchorSide(BranchEntity.Side.valueOf(RANDOM.nextInt(4)));
+				mBranchMatrix[i][j].setAnchorSide(BranchEntity.Side.valueOf(random.nextInt(4)));
 	}
 
 	private void showCorrectAnswer(int rowCount, int columnCount) {
-		for(int i = 0; i < rowCount; ++i)
-			for(int j = 0; j < columnCount; ++j)
-				mBranchMatrix[i][j].setAnchorSide(mBranchCorrectAnswer[i][j]);
+        for (int i = 0; i < rowCount; ++i)
+            for (int j = 0; j < columnCount; ++j)
+                mBranchMatrix[i][j].setAnchorSide(mBranchCorrectAnswer[i][j]);
 
-		mBranchRoot.updateAliveState(BranchEntity.Side.Left);
-	}
-
-	private void fill(int[] arr, int value) {
-		for(int i = 0; i < arr.length; ++i)
-			arr[i] = value;
-	}
-
-	private int getRandom(){
-		return RANDOM.nextInt(RANDOM_STOP - RANDOM_START) + RANDOM_START;
-	}
-
-	private void generateLevelMatrix(int rowCount, int columnCount) {
-		boolean showLog = false;
-		int verticesCount = rowCount * columnCount;
-
-		final int INF = Integer.MAX_VALUE / 2;
-
-		int[][] matrix = new int[verticesCount][verticesCount];
-		resultMatrix = new int[verticesCount][verticesCount];
-
-		int[] treeEdges = new int[verticesCount];
-		fill(treeEdges, -1);
-		int[] edgesDegrees = new int[verticesCount];
-		fill(edgesDegrees, 0);
-
-		for(int i = 0 ; i < verticesCount; ++i) {
-			fill(matrix[i], INF);
-			fill(resultMatrix[i], 0);
-		}
-
-		for(int i = 0 ; i < verticesCount; ++i){
-			if(i - 1 >= 0 && i % columnCount != 0)
-				matrix[i][i - 1] = getRandom();
-
-			if(i + 1 <verticesCount && i % columnCount != columnCount - 1)
-				matrix[i][i + 1] = getRandom();
-
-			if(i + columnCount < verticesCount)
-				matrix[i][i + columnCount] = getRandom();
-
-			if(i - columnCount >= 0)
-				matrix[i][i - columnCount] = getRandom();
-		}
-
-		if(showLog) {
-			System.out.print("matrix: \n");
-
-			StringBuilder sb = new StringBuilder();
-			for( int i = 0; i < verticesCount; ++i) {
-				sb.setLength(0);
-				for (int j = 0; j < verticesCount; ++j) {
-					if(matrix[i][j] == INF)
-						sb.append(0);
-					else
-						sb.append(matrix[i][j]);
-					sb.append(" ");
-				}
-				System.out.print(sb.toString() + "\n");
-			}
-
-		}
-
-		boolean[] used = new boolean [verticesCount]; // массив пометок
-		int[] dist = new int [verticesCount]; // массив расстояния. dist[v] = вес_ребра(MST, v)
-		fill(dist, INF); // устанаавливаем расстояние до всех вершин INF
-		int startVertexNumber = 0;//(columnCount + rowCount) / 9;
-		dist[startVertexNumber] = 0; // для начальной вершины положим 0
-		treeEdges[startVertexNumber] = startVertexNumber;
-
-		for (;;) {
-			int v = -1;
-			for (int nv = 0; nv < verticesCount; nv++) // перебираем вершины
-				if (!used[nv] && dist[nv] < INF && (v == -1 || dist[v] > dist[nv])) { // выбираем самую близкую непомеченную вершину
-					v = nv;
-				}
-			if (v == -1) break; // ближайшая вершина не найдена
-			used[v] = true; // помечаем ее
-			for (int to = 0; to < verticesCount; to++) {
-				if (edgesDegrees[to] < 3 && edgesDegrees[v] < 3 && !used[to] && matrix[to][v] < INF) { // для всех непомеченных смежных
-					if (dist[to] > matrix[to][v]) {
-						dist[to] = matrix[to][v]; // улучшаем оценку расстояния (релаксация)
-						if(treeEdges[to] == -1) {
-							edgesDegrees[to]++;
-						} else if (treeEdges[to] != to)
-							edgesDegrees[treeEdges[to]]--;
-						edgesDegrees[v]++;
-						treeEdges[to] = v;
-					}
-				}
-			}
-		}
-
-		if(showLog) {
-			StringBuilder sb = new StringBuilder();
-
-			System.out.print("result edges degrees: \n");
-			for(int i =0; i< verticesCount; ++i) {
-				if (edgesDegrees[i] == -1) {
-					edgesDegrees[i] = 0;
-				}
-				System.out.println(i + " => " + edgesDegrees[i]);
-			}
-
-			System.out.print("result edges: \n");
-			sb.setLength(0);
-			for (int j = 0; j < verticesCount; ++j) {
-				sb.append(j);
-				sb.append(" => ");
-				if(treeEdges[j] == -1) {
-					System.out.print("tree not found restart: \n");
-					generateLevelMatrix(rowCount, columnCount);
-				}
-				sb.append(treeEdges[j]);
-				sb.append("\n");
-			}
-			System.out.print(sb.toString() + "\n");
-		}
-
-		for(int i = 0; i < verticesCount; ++i)
-			if(treeEdges[i] != i) {
-				resultMatrix[i][treeEdges[i]] = 1;
-				resultMatrix[treeEdges[i]][i] = 1;
-			}
-
-		if(showLog) {
-			StringBuilder sb = new StringBuilder();
-			for( int i = 0; i < verticesCount; ++i) {
-				sb.setLength(0);
-				for (int j = 0; j < verticesCount; ++j) {
-					sb.append(resultMatrix[i][j]);
-				}
-				System.out.print(sb.toString() + "\n");
-			}
-		}
-
-	}
+        mBranchRoot.updateAliveState(BranchEntity.Side.Left);
+    }
 
 	private BranchEntity addBranch(BranchType branchType, int columnNumber, int rowNumber, int height) {
 		BranchEntity branchEntity = createBranchEntity(branchType, columnNumber, rowNumber, height);
