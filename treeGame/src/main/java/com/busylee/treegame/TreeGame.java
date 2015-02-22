@@ -19,7 +19,9 @@ import org.andengine.entity.scene.background.Background;
 import org.andengine.entity.scene.menu.MenuScene;
 import org.andengine.entity.scene.menu.item.IMenuItem;
 import org.andengine.entity.scene.menu.item.SpriteMenuItem;
+import org.andengine.entity.sprite.ButtonSprite;
 import org.andengine.entity.util.FPSLogger;
+import org.andengine.input.touch.TouchEvent;
 import org.andengine.opengl.texture.TextureOptions;
 import org.andengine.opengl.texture.atlas.bitmap.BitmapTextureAtlas;
 import org.andengine.opengl.texture.atlas.bitmap.BitmapTextureAtlasTextureRegionFactory;
@@ -103,8 +105,19 @@ public class TreeGame extends SimpleBaseGameActivity implements ITreeMaster, Men
 		this.mGameScene = new Scene();
 		this.mGameScene.setBackground(new Background(0, 20, 20));
 
-        showMenu();
+        ButtonSprite pauseButton = new ButtonSprite(0 , 0, this.mMenuStartTextureRegion, this.getVertexBufferObjectManager()) {
+            @Override
+            public boolean onAreaTouched(TouchEvent pSceneTouchEvent, float pTouchAreaLocalX, float pTouchAreaLocalY) {
+                showMenu(true);
+                return true;
+            }
+        };
+        pauseButton.setPosition(CAMERA_WIDTH - pauseButton.getWidth() / 2, CAMERA_HEIGHT - pauseButton.getHeight() / 2);
 
+        this.mGameScene.registerTouchArea(pauseButton);
+        this.mGameScene.attachChild(pauseButton);
+
+        showMenu();
         return this.mGameScene;
 	}
 
@@ -135,9 +148,9 @@ public class TreeGame extends SimpleBaseGameActivity implements ITreeMaster, Men
     }
 
     @Override
-    protected void onPause() {
-        super.onPause();
-        showMenu(true);
+    public synchronized void onPauseGame() {
+        super.onPauseGame();
+//        showMenu(true);
     }
 
     // ===========================================================
