@@ -45,15 +45,14 @@ public class TreeGame extends SimpleBaseGameActivity implements ITreeMaster, Men
 
     protected static final int MENU_START = 0;
     protected static final int MENU_QUIT = MENU_START + 1;
+    protected static final int MENU_CONTINUE = MENU_START + 2;
 
 
     // ===========================================================
     // Fields
     // ===========================================================3
 
-	private BitmapTextureAtlas mBitmapTextureAtlas;
-
-	private BranchEntity[][] mBranchMatrix;
+    private BranchEntity[][] mBranchMatrix;
 	private BranchEntity.Side[][] mBranchCorrectAnswer;
 
 	private ITiledTextureRegion
@@ -63,7 +62,6 @@ public class TreeGame extends SimpleBaseGameActivity implements ITreeMaster, Men
 			mBranchDoubleEndedTextureRegion,
 			mBranchTripleEndedTextureRegion;
 
-    private BitmapTextureAtlas mMenuTextureAtlas;
     protected ITextureRegion mMenuStartTextureRegion;
     protected ITextureRegion mMenuQuitTextureRegion;
 
@@ -85,18 +83,18 @@ public class TreeGame extends SimpleBaseGameActivity implements ITreeMaster, Men
 
 		this.mVertexBufferObjectManager = this.getVertexBufferObjectManager();
 
-		this.mBitmapTextureAtlas = new BitmapTextureAtlas(this.getTextureManager(), 64, 160, TextureOptions.BILINEAR);
-		this.mBranchLeafTextureRegion = BitmapTextureAtlasTextureRegionFactory.createTiledFromAsset(this.mBitmapTextureAtlas, this, "branch_leaf.png", 0, 0, 2, 1); // 32x32
-		this.mBranchLongTextureRegion = BitmapTextureAtlasTextureRegionFactory.createTiledFromAsset(this.mBitmapTextureAtlas, this, "branch_long.png", 0, 32, 2, 1); // 32x32
-		this.mBranchDoubleEndedTextureRegion = BitmapTextureAtlasTextureRegionFactory.createTiledFromAsset(this.mBitmapTextureAtlas, this, "branch_double_ended.png", 0, 64, 2, 1); // 32x32
-		this.mBranchTripleEndedTextureRegion = BitmapTextureAtlasTextureRegionFactory.createTiledFromAsset(this.mBitmapTextureAtlas, this, "branch_triple_ended.png", 0, 96, 2, 1); // 32x32
-		this.mBranchRootTextureRegion = BitmapTextureAtlasTextureRegionFactory.createTiledFromAsset(this.mBitmapTextureAtlas, this, "branch_root.png", 0, 128, 1, 1); // 32x32
-		this.mBitmapTextureAtlas.load();
+        BitmapTextureAtlas mBitmapTextureAtlas = new BitmapTextureAtlas(this.getTextureManager(), 64, 160, TextureOptions.BILINEAR);
+		this.mBranchLeafTextureRegion = BitmapTextureAtlasTextureRegionFactory.createTiledFromAsset(mBitmapTextureAtlas, this, "branch_leaf.png", 0, 0, 2, 1); // 32x32
+		this.mBranchLongTextureRegion = BitmapTextureAtlasTextureRegionFactory.createTiledFromAsset(mBitmapTextureAtlas, this, "branch_long.png", 0, 32, 2, 1); // 32x32
+		this.mBranchDoubleEndedTextureRegion = BitmapTextureAtlasTextureRegionFactory.createTiledFromAsset(mBitmapTextureAtlas, this, "branch_double_ended.png", 0, 64, 2, 1); // 32x32
+		this.mBranchTripleEndedTextureRegion = BitmapTextureAtlasTextureRegionFactory.createTiledFromAsset(mBitmapTextureAtlas, this, "branch_triple_ended.png", 0, 96, 2, 1); // 32x32
+		this.mBranchRootTextureRegion = BitmapTextureAtlasTextureRegionFactory.createTiledFromAsset(mBitmapTextureAtlas, this, "branch_root.png", 0, 128, 1, 1); // 32x32
+		mBitmapTextureAtlas.load();
 
-        this.mMenuTextureAtlas = new BitmapTextureAtlas(this.getTextureManager(), 256, 128, TextureOptions.BILINEAR);
-        this.mMenuStartTextureRegion = BitmapTextureAtlasTextureRegionFactory.createFromAsset(this.mMenuTextureAtlas, this, "menu_reset.png", 0, 0);
-        this.mMenuQuitTextureRegion = BitmapTextureAtlasTextureRegionFactory.createFromAsset(this.mMenuTextureAtlas, this, "menu_quit.png", 0, 50);
-        this.mMenuTextureAtlas.load();
+        BitmapTextureAtlas mMenuTextureAtlas = new BitmapTextureAtlas(this.getTextureManager(), 256, 128, TextureOptions.BILINEAR);
+        this.mMenuStartTextureRegion = BitmapTextureAtlasTextureRegionFactory.createFromAsset(mMenuTextureAtlas, this, "menu_reset.png", 0, 0);
+        this.mMenuQuitTextureRegion = BitmapTextureAtlasTextureRegionFactory.createFromAsset(mMenuTextureAtlas, this, "menu_quit.png", 0, 50);
+        mMenuTextureAtlas.load();
 	}
 
 	@Override
@@ -125,6 +123,9 @@ public class TreeGame extends SimpleBaseGameActivity implements ITreeMaster, Men
                 this.mGameScene.clearChildScene();
                 showTree();
                 return true;
+            case MENU_CONTINUE:
+                this.mGameScene.clearChildScene();
+                return true;
             case MENU_QUIT:
 				/* End Activity. */
                 this.finish();
@@ -137,8 +138,7 @@ public class TreeGame extends SimpleBaseGameActivity implements ITreeMaster, Men
     @Override
     protected void onPause() {
         super.onPause();
-
-        showMenu();
+        showMenu(true);
     }
 
     // ===========================================================
@@ -146,24 +146,33 @@ public class TreeGame extends SimpleBaseGameActivity implements ITreeMaster, Men
     // ===========================================================
 
     private void showMenu() {
-        if(this.mMenuScene == null) {
-            this.mMenuScene = new MenuScene(this.mCamera);
+        showMenu(false);
+    }
 
-            final SpriteMenuItem resetMenuItem = new SpriteMenuItem(MENU_START, this.mMenuStartTextureRegion, this.getVertexBufferObjectManager());
-            resetMenuItem.setBlendFunction(GLES20.GL_SRC_ALPHA, GLES20.GL_ONE_MINUS_SRC_ALPHA);
-            resetMenuItem.setPosition(CAMERA_WIDTH / 2, CAMERA_HEIGHT / 2);
-            this.mMenuScene.addMenuItem(resetMenuItem);
+    private void showMenu(boolean isPause) {
+        this.mMenuScene = new MenuScene(this.mCamera);
 
-            final SpriteMenuItem quitMenuItem = new SpriteMenuItem(MENU_QUIT, this.mMenuQuitTextureRegion, this.getVertexBufferObjectManager());
-            quitMenuItem.setBlendFunction(GLES20.GL_SRC_ALPHA, GLES20.GL_ONE_MINUS_SRC_ALPHA);
-            this.mMenuScene.addMenuItem(quitMenuItem);
-
-            this.mMenuScene.buildAnimations();
-
-            this.mMenuScene.setBackgroundEnabled(false);
-
-            this.mMenuScene.setOnMenuItemClickListener(this);
+        if(isPause) {
+            final SpriteMenuItem continueMenuItem = new SpriteMenuItem(MENU_CONTINUE, this.mMenuStartTextureRegion, this.getVertexBufferObjectManager());
+            continueMenuItem.setBlendFunction(GLES20.GL_SRC_ALPHA, GLES20.GL_ONE_MINUS_SRC_ALPHA);
+            continueMenuItem.setPosition(CAMERA_WIDTH / 2, CAMERA_HEIGHT / 2);
+            this.mMenuScene.addMenuItem(continueMenuItem);
         }
+
+        final SpriteMenuItem newGameMenuItem = new SpriteMenuItem(MENU_START, this.mMenuStartTextureRegion, this.getVertexBufferObjectManager());
+        newGameMenuItem.setBlendFunction(GLES20.GL_SRC_ALPHA, GLES20.GL_ONE_MINUS_SRC_ALPHA);
+        newGameMenuItem.setPosition(CAMERA_WIDTH / 2, CAMERA_HEIGHT / 2);
+        this.mMenuScene.addMenuItem(newGameMenuItem);
+
+        final SpriteMenuItem quitMenuItem = new SpriteMenuItem(MENU_QUIT, this.mMenuQuitTextureRegion, this.getVertexBufferObjectManager());
+        quitMenuItem.setBlendFunction(GLES20.GL_SRC_ALPHA, GLES20.GL_ONE_MINUS_SRC_ALPHA);
+        this.mMenuScene.addMenuItem(quitMenuItem);
+
+        this.mMenuScene.buildAnimations();
+
+        this.mMenuScene.setBackgroundEnabled(false);
+
+        this.mMenuScene.setOnMenuItemClickListener(this);
 
         this.mGameScene.setChildScene(this.mMenuScene, false, true, true);
     }
