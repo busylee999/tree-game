@@ -13,7 +13,7 @@ import com.busylee.treegame.branch.BranchTripleEnded;
 import org.andengine.engine.camera.Camera;
 import org.andengine.engine.options.EngineOptions;
 import org.andengine.engine.options.ScreenOrientation;
-import org.andengine.engine.options.resolutionpolicy.RatioResolutionPolicy;
+import org.andengine.engine.options.resolutionpolicy.FillResolutionPolicy;
 import org.andengine.entity.scene.Scene;
 import org.andengine.entity.scene.background.Background;
 import org.andengine.entity.scene.menu.MenuScene;
@@ -40,13 +40,12 @@ public class TreeGame extends SimpleBaseGameActivity implements ITreeMaster, Men
     // Constants
     // ===========================================================
 
-	private static final int CAMERA_WIDTH = 480;
-	private static final int CAMERA_HEIGHT = 720;
-
     protected static final int MENU_START = 0;
     protected static final int MENU_QUIT = MENU_START + 1;
     protected static final int MENU_CONTINUE = MENU_START + 2;
 
+    private static final int CAMERA_WIDTH = 480;
+    private static final int CAMERA_HEIGHT = 720;
 
     // ===========================================================
     // Fields
@@ -113,7 +112,7 @@ public class TreeGame extends SimpleBaseGameActivity implements ITreeMaster, Men
     public EngineOptions onCreateEngineOptions() {
         mCamera = new Camera(0, 0, CAMERA_WIDTH, CAMERA_HEIGHT);
 
-        return new EngineOptions(true, ScreenOrientation.PORTRAIT_FIXED, new RatioResolutionPolicy(CAMERA_WIDTH, CAMERA_HEIGHT), mCamera);
+        return new EngineOptions(true, ScreenOrientation.PORTRAIT_FIXED,  new FillResolutionPolicy(), mCamera);
     }
 
     @Override
@@ -252,7 +251,7 @@ public class TreeGame extends SimpleBaseGameActivity implements ITreeMaster, Men
 
 				}
 
-				mBranchMatrix[i][j] = addBranch(branchType, j , i, CAMERA_HEIGHT );
+				mBranchMatrix[i][j] = addBranch(branchType, j , i, CAMERA_HEIGHT);
 				mBranchCorrectAnswer[i][j] = branchCorrectSide;
 			}
 
