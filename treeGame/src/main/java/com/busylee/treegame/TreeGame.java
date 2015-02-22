@@ -1,19 +1,29 @@
 package com.busylee.treegame;
 
+import android.opengl.GLES20;
 import android.widget.Toast;
-import com.busylee.treegame.branch.*;
+
+import com.busylee.treegame.branch.BranchDoubleEnded;
+import com.busylee.treegame.branch.BranchEntity;
+import com.busylee.treegame.branch.BranchLeaf;
+import com.busylee.treegame.branch.BranchLongEnded;
+import com.busylee.treegame.branch.BranchRoot;
+import com.busylee.treegame.branch.BranchTripleEnded;
+
 import org.andengine.engine.camera.Camera;
 import org.andengine.engine.options.EngineOptions;
 import org.andengine.engine.options.ScreenOrientation;
 import org.andengine.engine.options.resolutionpolicy.RatioResolutionPolicy;
-import org.andengine.entity.scene.IOnSceneTouchListener;
 import org.andengine.entity.scene.Scene;
 import org.andengine.entity.scene.background.Background;
+import org.andengine.entity.scene.menu.MenuScene;
+import org.andengine.entity.scene.menu.item.IMenuItem;
+import org.andengine.entity.scene.menu.item.SpriteMenuItem;
 import org.andengine.entity.util.FPSLogger;
-import org.andengine.input.touch.TouchEvent;
 import org.andengine.opengl.texture.TextureOptions;
 import org.andengine.opengl.texture.atlas.bitmap.BitmapTextureAtlas;
 import org.andengine.opengl.texture.atlas.bitmap.BitmapTextureAtlasTextureRegionFactory;
+import org.andengine.opengl.texture.region.ITextureRegion;
 import org.andengine.opengl.texture.region.ITiledTextureRegion;
 import org.andengine.opengl.vbo.VertexBufferObjectManager;
 import org.andengine.ui.activity.SimpleBaseGameActivity;
@@ -25,10 +35,21 @@ import java.util.Random;
 /**
  * Created by busylee on 14.02.15.
  */
-public class TreeGame extends SimpleBaseGameActivity implements ITreeMaster {
+public class TreeGame extends SimpleBaseGameActivity implements ITreeMaster, MenuScene.IOnMenuItemClickListener {
+    // ===========================================================
+    // Constants
+    // ===========================================================
 
-	private static final int CAMERA_WIDTH = 720;
-	private static final int CAMERA_HEIGHT = 480;
+	private static final int CAMERA_WIDTH = 480;
+	private static final int CAMERA_HEIGHT = 720;
+
+    protected static final int MENU_START = 0;
+    protected static final int MENU_QUIT = MENU_START + 1;
+
+
+    // ===========================================================
+    // Fields
+    // ===========================================================
 
 	final Random RANDOM = new Random(System.currentTimeMillis());
 	final int RANDOM_START = 1;
@@ -48,12 +69,23 @@ public class TreeGame extends SimpleBaseGameActivity implements ITreeMaster {
 			mBranchDoubleEndedTextureRegion,
 			mBranchTripleEndedTextureRegion;
 
-	private Scene mScene;
+    private BitmapTextureAtlas mMenuTextureAtlas;
+    protected ITextureRegion mMenuStartTextureRegion;
+    protected ITextureRegion mMenuQuitTextureRegion;
+
+	private Scene mGameScene;
+    private MenuScene mMenuScene;
+
 	private VertexBufferObjectManager mVertexBufferObjectManager;
 
-	private BranchRoot branchRoot = null;
+	private BranchRoot mBranchRoot = null;
+    private Camera mCamera;
 
-	@Override
+    // ===========================================================
+    // AndEngine lifecycle methods
+    // ===========================================================
+
+    @Override
 	protected void onCreateResources() throws IOException {
 		BitmapTextureAtlasTextureRegionFactory.setAssetBasePath("gfx/");
 
@@ -66,27 +98,74 @@ public class TreeGame extends SimpleBaseGameActivity implements ITreeMaster {
 		this.mBranchTripleEndedTextureRegion = BitmapTextureAtlasTextureRegionFactory.createTiledFromAsset(this.mBitmapTextureAtlas, this, "branch_triple_ended.png", 0, 96, 2, 1); // 32x32
 		this.mBranchRootTextureRegion = BitmapTextureAtlasTextureRegionFactory.createTiledFromAsset(this.mBitmapTextureAtlas, this, "branch_root.png", 0, 128, 1, 1); // 32x32
 		this.mBitmapTextureAtlas.load();
+
+        this.mMenuTextureAtlas = new BitmapTextureAtlas(this.getTextureManager(), 256, 128, TextureOptions.BILINEAR);
+        this.mMenuStartTextureRegion = BitmapTextureAtlasTextureRegionFactory.createFromAsset(this.mMenuTextureAtlas, this, "menu_reset.png", 0, 0);
+        this.mMenuQuitTextureRegion = BitmapTextureAtlasTextureRegionFactory.createFromAsset(this.mMenuTextureAtlas, this, "menu_quit.png", 0, 50);
+        this.mMenuTextureAtlas.load();
 	}
 
 	@Override
 	protected Scene onCreateScene() {
 		this.mEngine.registerUpdateHandler(new FPSLogger());
 
-		this.mScene = new Scene();
-		this.mScene.setBackground(new Background(0, 20, 20));
+		this.mGameScene = new Scene();
+		this.mGameScene.setBackground(new Background(0, 20, 20));
 
-		showTree();
+        showMenu();
 
-		this.mScene.setOnSceneTouchListener(new IOnSceneTouchListener() {
-			@Override
-			public boolean onSceneTouchEvent(Scene pScene, TouchEvent pSceneTouchEvent) {
-				restartGame();
-				return false;
-			}
-		});
-
-		return this.mScene;
+        return this.mGameScene;
 	}
+
+    @Override
+    public EngineOptions onCreateEngineOptions() {
+        mCamera = new Camera(0, 0, CAMERA_WIDTH, CAMERA_HEIGHT);
+
+        return new EngineOptions(true, ScreenOrientation.PORTRAIT_FIXED, new RatioResolutionPolicy(CAMERA_WIDTH, CAMERA_HEIGHT), mCamera);
+    }
+
+    @Override
+    public boolean onMenuItemClicked(MenuScene pMenuScene, IMenuItem pMenuItem, float pMenuItemLocalX, float pMenuItemLocalY) {
+        switch(pMenuItem.getID()) {
+            case MENU_START:
+                this.mGameScene.clearChildScene();
+                showTree();
+                return true;
+            case MENU_QUIT:
+				/* End Activity. */
+                this.finish();
+                return true;
+            default:
+                return false;
+        }
+    }
+
+    // ===========================================================
+    // Game methods
+    // ===========================================================
+
+    private void showMenu() {
+        if(this.mMenuScene == null) {
+            this.mMenuScene = new MenuScene(this.mCamera);
+
+            final SpriteMenuItem resetMenuItem = new SpriteMenuItem(MENU_START, this.mMenuStartTextureRegion, this.getVertexBufferObjectManager());
+            resetMenuItem.setBlendFunction(GLES20.GL_SRC_ALPHA, GLES20.GL_ONE_MINUS_SRC_ALPHA);
+            resetMenuItem.setPosition(CAMERA_WIDTH / 2, CAMERA_HEIGHT / 2);
+            this.mMenuScene.addMenuItem(resetMenuItem);
+
+            final SpriteMenuItem quitMenuItem = new SpriteMenuItem(MENU_QUIT, this.mMenuQuitTextureRegion, this.getVertexBufferObjectManager());
+            quitMenuItem.setBlendFunction(GLES20.GL_SRC_ALPHA, GLES20.GL_ONE_MINUS_SRC_ALPHA);
+            this.mMenuScene.addMenuItem(quitMenuItem);
+
+            this.mMenuScene.buildAnimations();
+
+            this.mMenuScene.setBackgroundEnabled(false);
+
+            this.mMenuScene.setOnMenuItemClickListener(this);
+        }
+
+        this.mGameScene.setChildScene(this.mMenuScene, false, true, true);
+    }
 
 	private void showTree() {
 
@@ -169,7 +248,7 @@ public class TreeGame extends SimpleBaseGameActivity implements ITreeMaster {
 
 		shakeTree(rowCount, columnCount);
 
-		branchRoot.updateAliveState(BranchEntity.Side.Left);
+		mBranchRoot.updateAliveState(BranchEntity.Side.Left);
 
 	}
 
@@ -184,7 +263,7 @@ public class TreeGame extends SimpleBaseGameActivity implements ITreeMaster {
 			for(int j = 0; j < columnCount; ++j)
 				mBranchMatrix[i][j].setAnchorSide(mBranchCorrectAnswer[i][j]);
 
-		branchRoot.updateAliveState(BranchEntity.Side.Left);
+		mBranchRoot.updateAliveState(BranchEntity.Side.Left);
 	}
 
 	private void fill(int[] arr, int value) {
@@ -324,22 +403,15 @@ public class TreeGame extends SimpleBaseGameActivity implements ITreeMaster {
 
 	private BranchEntity addBranch(BranchType branchType, int columnNumber, int rowNumber, int height) {
 		BranchEntity branchEntity = createBranchEntity(branchType, columnNumber, rowNumber, height);
-		this.mScene.registerTouchArea(branchEntity);
-		this.mScene.attachChild(branchEntity);
+		this.mGameScene.registerTouchArea(branchEntity);
+		this.mGameScene.attachChild(branchEntity);
 		return branchEntity;
-	}
-
-	@Override
-	public EngineOptions onCreateEngineOptions() {
-		final Camera camera = new Camera(0, 0, CAMERA_WIDTH, CAMERA_HEIGHT);
-
-		return new EngineOptions(true, ScreenOrientation.LANDSCAPE_FIXED, new RatioResolutionPolicy(CAMERA_WIDTH, CAMERA_HEIGHT), camera);
 	}
 
 	@Override
 	public void onBranchTouched() {
 		deathAllBranches();
-		branchRoot.updateAliveState(BranchEntity.Side.Left);
+		mBranchRoot.updateAliveState(BranchEntity.Side.Left);
 
 		//todo
 		if(checkWin()) {
@@ -349,21 +421,22 @@ public class TreeGame extends SimpleBaseGameActivity implements ITreeMaster {
 					Toast.makeText(TreeGame.this, "You win!!!", Toast.LENGTH_SHORT).show();
 				}
 			});
-			restartGame();
+			resetGame();
+
+            showMenu();
 		}
 
 	}
 
-	private void restartGame() {
-		branchRoot = null;
-		removeTree();
-		showTree();
-	}
+    private void resetGame() {
+        mBranchRoot = null;
+        removeTree();
+    }
 
 	private void removeTree() {
 		for(int i = 0 ; i < mBranchMatrix.length; ++i)
 			for (int j = 0; j < mBranchMatrix[i].length; ++j) {
-				mScene.unregisterTouchArea(mBranchMatrix[i][j]);
+				mGameScene.unregisterTouchArea(mBranchMatrix[i][j]);
 				mBranchMatrix[i][j].detachSelf();
 				mBranchMatrix[i][j].dispose();
 			}
@@ -390,13 +463,13 @@ public class TreeGame extends SimpleBaseGameActivity implements ITreeMaster {
 		switch (branchType) {
             case Root:
 			case Leaf:
-				if(branchRoot == null) {
-					branchRoot = new BranchRoot(
+				if(mBranchRoot == null) {
+					mBranchRoot = new BranchRoot(
 							columnNumber,
 							rowNumber,
 							height,
 							mBranchRootTextureRegion, mVertexBufferObjectManager, this);
-					branchEntity = branchRoot;
+					branchEntity = mBranchRoot;
 					break;
 				}
 
@@ -441,7 +514,7 @@ public class TreeGame extends SimpleBaseGameActivity implements ITreeMaster {
 		else return null;
 	}
 
-	enum BranchType {
+    enum BranchType {
 		Root,
 		Leaf,
 		LongBranch,
