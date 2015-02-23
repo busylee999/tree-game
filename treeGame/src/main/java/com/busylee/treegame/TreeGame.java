@@ -437,13 +437,14 @@ public class TreeGame extends SimpleBaseGameActivity implements ITreeMaster, Men
 	}
 
 	private void removeTree() {
-		for(int i = 0 ; i < mBranchMatrix.length; ++i)
-			for (int j = 0; j < mBranchMatrix[i].length; ++j)
-                if(mBranchMatrix[i][j] != null) {
-                    mGameScene.unregisterTouchArea(mBranchMatrix[i][j]);
-                    mBranchMatrix[i][j].detachSelf();
-                    mBranchMatrix[i][j].dispose();
-                }
+        if(mBranchMatrix != null)
+            for(int i = 0 ; i < mBranchMatrix.length; ++i)
+                for (int j = 0; j < mBranchMatrix[i].length; ++j)
+                    if(mBranchMatrix[i][j] != null) {
+                        mGameScene.unregisterTouchArea(mBranchMatrix[i][j]);
+                        mBranchMatrix[i][j].detachSelf();
+                        mBranchMatrix[i][j].dispose();
+                    }
 	}
 
 	private void deathAllBranches() {
