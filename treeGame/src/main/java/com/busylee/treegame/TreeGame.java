@@ -1,6 +1,9 @@
 package com.busylee.treegame;
 
+import android.graphics.Typeface;
 import android.opengl.GLES20;
+import android.os.Bundle;
+import android.os.Handler;
 import android.widget.Toast;
 
 import com.busylee.treegame.branch.BranchDoubleEnded;
@@ -20,8 +23,12 @@ import org.andengine.entity.scene.menu.MenuScene;
 import org.andengine.entity.scene.menu.item.IMenuItem;
 import org.andengine.entity.scene.menu.item.SpriteMenuItem;
 import org.andengine.entity.sprite.ButtonSprite;
+import org.andengine.entity.text.Text;
+import org.andengine.entity.text.TextOptions;
 import org.andengine.entity.util.FPSLogger;
 import org.andengine.input.touch.TouchEvent;
+import org.andengine.opengl.font.Font;
+import org.andengine.opengl.font.FontFactory;
 import org.andengine.opengl.texture.TextureOptions;
 import org.andengine.opengl.texture.atlas.bitmap.BitmapTextureAtlas;
 import org.andengine.opengl.texture.atlas.bitmap.BitmapTextureAtlasTextureRegionFactory;
@@ -29,6 +36,7 @@ import org.andengine.opengl.texture.region.ITextureRegion;
 import org.andengine.opengl.texture.region.ITiledTextureRegion;
 import org.andengine.opengl.vbo.VertexBufferObjectManager;
 import org.andengine.ui.activity.SimpleBaseGameActivity;
+import org.andengine.util.adt.align.HorizontalAlign;
 import org.andengine.util.math.MathUtils;
 
 import java.io.IOException;
@@ -45,6 +53,9 @@ public class TreeGame extends SimpleBaseGameActivity implements ITreeMaster, Men
     protected static final int MENU_START = 0;
     protected static final int MENU_QUIT = MENU_START + 1;
     protected static final int MENU_CONTINUE = MENU_START + 2;
+
+    protected static final int TIMER_INTERVAL = 1000; //1000 ms
+    protected static final int SCORE_LIMIT_IN_SEC = 60 * 5; // 5 min
 
     private static final int CAMERA_WIDTH = 480;
     private static final int CAMERA_HEIGHT = 720;
@@ -74,9 +85,36 @@ public class TreeGame extends SimpleBaseGameActivity implements ITreeMaster, Men
 	private BranchRoot mBranchRoot = null;
     private Camera mCamera;
 
+    private Text mScoreText;
+
+    private int mScore;
+    private boolean mTimer;
+
+    private Handler mHandler;
+    private Runnable mTimerRunnable = new Runnable() {
+        @Override
+        public void run() {
+            if(mTimer) {
+                mScore ++;
+                mScoreText.setText(String.valueOf(mScore));
+                if(mScore < SCORE_LIMIT_IN_SEC)
+                    mHandler.postDelayed(this, TIMER_INTERVAL);
+                else
+                    onGameLose();
+            }
+        }
+    };
+
     // ===========================================================
     // AndEngine lifecycle methods
     // ===========================================================
+
+
+    @Override
+    protected void onCreate(Bundle pSavedInstanceState) {
+        super.onCreate(pSavedInstanceState);
+        mHandler = new Handler();
+    }
 
     @Override
 	protected void onCreateResources() throws IOException {
@@ -109,10 +147,19 @@ public class TreeGame extends SimpleBaseGameActivity implements ITreeMaster, Men
             @Override
             public boolean onAreaTouched(TouchEvent pSceneTouchEvent, float pTouchAreaLocalX, float pTouchAreaLocalY) {
                 showMenu(true);
+                pauseGame();
                 return true;
             }
         };
         pauseButton.setPosition(CAMERA_WIDTH - pauseButton.getWidth() / 2, CAMERA_HEIGHT - pauseButton.getHeight() / 2);
+
+        // CREATE SCORE TEXT
+        Font font = FontFactory.create(this.getFontManager(), this.getTextureManager(), 256, 256, TextureOptions.BILINEAR, Typeface.create(Typeface.DEFAULT, Typeface.BOLD), 32);
+        font.load();
+
+        mScoreText = new Text(0, CAMERA_HEIGHT, font, "Score: 0123456789", new TextOptions(HorizontalAlign.LEFT), this.getVertexBufferObjectManager());
+        mScoreText.setPosition(0 + mScoreText.getWidth() / 2, CAMERA_HEIGHT - mScoreText.getHeight() / 2);
+        this.mGameScene.attachChild(mScoreText);
 
         this.mGameScene.registerTouchArea(pauseButton);
         this.mGameScene.attachChild(pauseButton);
@@ -120,6 +167,8 @@ public class TreeGame extends SimpleBaseGameActivity implements ITreeMaster, Men
         showMenu();
         return this.mGameScene;
 	}
+
+
 
     @Override
     public EngineOptions onCreateEngineOptions() {
@@ -133,12 +182,14 @@ public class TreeGame extends SimpleBaseGameActivity implements ITreeMaster, Men
         switch(pMenuItem.getID()) {
             case MENU_START:
                 this.mGameScene.clearChildScene();
-                showTree();
+                startGame();
                 return true;
             case MENU_CONTINUE:
                 this.mGameScene.clearChildScene();
+                continueGame();
                 return true;
             case MENU_QUIT:
+                stopTimer();
 				/* End Activity. */
                 this.finish();
                 return true;
@@ -154,7 +205,7 @@ public class TreeGame extends SimpleBaseGameActivity implements ITreeMaster, Men
     }
 
     // ===========================================================
-    // Game methods
+    // UI game methods (menu, scene transitions, etc.)
     // ===========================================================
 
     private void showMenu() {
@@ -188,6 +239,78 @@ public class TreeGame extends SimpleBaseGameActivity implements ITreeMaster, Men
 
         this.mGameScene.setChildScene(this.mMenuScene, false, true, true);
     }
+
+    // ===========================================================
+    // Game control methods
+    // ===========================================================
+
+    private synchronized void startGame() {
+        removeTree();
+        showTree();
+        resetTimer();
+        startTimer();
+    }
+
+    private synchronized void pauseGame() {
+        stopTimer();
+    }
+
+    private synchronized void resetGame() {
+        mBranchRoot = null;
+        removeTree();
+    }
+
+    private synchronized void restartGame() {
+        resetTimer();
+        resetGame();
+        startGame();
+    }
+
+    private void continueGame() {
+        startTimer();
+    }
+
+    private synchronized void onGameLose() {
+        stopTimer();
+        //todo stub
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                Toast.makeText(TreeGame.this, "You lose!!!", Toast.LENGTH_SHORT).show();
+            }
+        });
+    }
+
+    private void onGameWin() {
+        stopTimer();
+        //todo stub
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                Toast.makeText(TreeGame.this, "You win!!!", Toast.LENGTH_SHORT).show();
+            }
+        });
+    }
+
+    private void startTimer() {
+        mTimer = true;
+        mHandler.postDelayed(mTimerRunnable, TIMER_INTERVAL);
+    }
+
+    private void stopTimer() {
+        mTimer = false;
+        mHandler.removeCallbacks(mTimerRunnable);
+    }
+
+    private void resetTimer() {
+        stopTimer();
+        mScore = 0;
+        mScoreText.setText(String.valueOf(mScore));
+    }
+
+    // ===========================================================
+    // Game entity interaction methods
+    // ===========================================================
 
 	private void showTree() {
 
@@ -277,8 +400,6 @@ public class TreeGame extends SimpleBaseGameActivity implements ITreeMaster, Men
 
 		shakeTree(rowCount, columnCount);
 
-		mBranchRoot.updateAliveState(BranchEntity.Side.Left);
-
 	}
 
 	private void shakeTree(int rowCount, int columnCount) {
@@ -286,6 +407,8 @@ public class TreeGame extends SimpleBaseGameActivity implements ITreeMaster, Men
 		for(int i = 0; i < rowCount; ++i)
 			for(int j = 0; j < columnCount; ++j)
 				mBranchMatrix[i][j].setAnchorSide(BranchEntity.Side.valueOf(random.nextInt(4)));
+
+        mBranchRoot.updateAliveState(BranchEntity.Side.Left);
 	}
 
 	private void showCorrectAnswer(int rowCount, int columnCount) {
@@ -308,33 +431,19 @@ public class TreeGame extends SimpleBaseGameActivity implements ITreeMaster, Men
 		deathAllBranches();
 		mBranchRoot.updateAliveState(BranchEntity.Side.Left);
 
-		//todo
-		if(checkWin()) {
-			runOnUiThread(new Runnable() {
-				@Override
-				public void run() {
-					Toast.makeText(TreeGame.this, "You win!!!", Toast.LENGTH_SHORT).show();
-				}
-			});
-			resetGame();
-
-            showMenu();
-		}
+		if(checkWin())
+			onGameWin();
 
 	}
 
-    private void resetGame() {
-        mBranchRoot = null;
-        removeTree();
-    }
-
 	private void removeTree() {
 		for(int i = 0 ; i < mBranchMatrix.length; ++i)
-			for (int j = 0; j < mBranchMatrix[i].length; ++j) {
-				mGameScene.unregisterTouchArea(mBranchMatrix[i][j]);
-				mBranchMatrix[i][j].detachSelf();
-				mBranchMatrix[i][j].dispose();
-			}
+			for (int j = 0; j < mBranchMatrix[i].length; ++j)
+                if(mBranchMatrix[i][j] != null) {
+                    mGameScene.unregisterTouchArea(mBranchMatrix[i][j]);
+                    mBranchMatrix[i][j].detachSelf();
+                    mBranchMatrix[i][j].dispose();
+                }
 	}
 
 	private void deathAllBranches() {
