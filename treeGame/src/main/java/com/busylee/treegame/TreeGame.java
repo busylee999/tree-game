@@ -245,6 +245,7 @@ public class TreeGame extends SimpleBaseGameActivity implements ITreeMaster, Men
     // ===========================================================
 
     private synchronized void startGame() {
+        mBranchRoot = null;
         removeTree();
         showTree();
         resetTimer();
@@ -253,17 +254,6 @@ public class TreeGame extends SimpleBaseGameActivity implements ITreeMaster, Men
 
     private synchronized void pauseGame() {
         stopTimer();
-    }
-
-    private synchronized void resetGame() {
-        mBranchRoot = null;
-        removeTree();
-    }
-
-    private synchronized void restartGame() {
-        resetTimer();
-        resetGame();
-        startGame();
     }
 
     private void continueGame() {
