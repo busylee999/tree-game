@@ -37,7 +37,6 @@ import org.andengine.opengl.texture.region.ITiledTextureRegion;
 import org.andengine.opengl.vbo.VertexBufferObjectManager;
 import org.andengine.ui.activity.SimpleBaseGameActivity;
 import org.andengine.util.adt.align.HorizontalAlign;
-import org.andengine.util.math.MathUtils;
 
 import java.io.IOException;
 import java.util.Random;
@@ -72,9 +71,11 @@ public class TreeGame extends SimpleBaseGameActivity implements ITreeMaster, Men
 			mBranchLeafTextureRegion,
 			mBranchLongTextureRegion,
 			mBranchDoubleEndedTextureRegion,
-			mBranchTripleEndedTextureRegion;
+			mBranchTripleEndedTextureRegion,
+            mTestTextureRegion;
 
     protected ITextureRegion mMenuStartTextureRegion;
+	protected ITextureRegion mMenuButtonTextureRegion;
     protected ITextureRegion mMenuQuitTextureRegion;
 
 	private Scene mGameScene;
@@ -122,17 +123,19 @@ public class TreeGame extends SimpleBaseGameActivity implements ITreeMaster, Men
 
 		this.mVertexBufferObjectManager = this.getVertexBufferObjectManager();
 
-        BitmapTextureAtlas mBitmapTextureAtlas = new BitmapTextureAtlas(this.getTextureManager(), 64, 160, TextureOptions.BILINEAR);
-		this.mBranchLeafTextureRegion = BitmapTextureAtlasTextureRegionFactory.createTiledFromAsset(mBitmapTextureAtlas, this, "branch_leaf.png", 0, 0, 2, 1); // 32x32
-		this.mBranchLongTextureRegion = BitmapTextureAtlasTextureRegionFactory.createTiledFromAsset(mBitmapTextureAtlas, this, "branch_long.png", 0, 32, 2, 1); // 32x32
-		this.mBranchDoubleEndedTextureRegion = BitmapTextureAtlasTextureRegionFactory.createTiledFromAsset(mBitmapTextureAtlas, this, "branch_double_ended.png", 0, 64, 2, 1); // 32x32
-		this.mBranchTripleEndedTextureRegion = BitmapTextureAtlasTextureRegionFactory.createTiledFromAsset(mBitmapTextureAtlas, this, "branch_triple_ended.png", 0, 96, 2, 1); // 32x32
-		this.mBranchRootTextureRegion = BitmapTextureAtlasTextureRegionFactory.createTiledFromAsset(mBitmapTextureAtlas, this, "branch_root.png", 0, 128, 1, 1); // 32x32
+        BitmapTextureAtlas mBitmapTextureAtlas = new BitmapTextureAtlas(this.getTextureManager(),128, 64, TextureOptions.BILINEAR);
+        this.mTestTextureRegion = BitmapTextureAtlasTextureRegionFactory.createTiledFromAsset(mBitmapTextureAtlas, this, "test.png", 0, 0, 2, 1); // 32x32
+//		this.mBranchLeafTextureRegion = BitmapTextureAtlasTextureRegionFactory.createTiledFromAsset(mBitmapTextureAtlas, this, "branch_leaf.png", 0, 0, 2, 1); // 32x32
+//		this.mBranchLongTextureRegion = BitmapTextureAtlasTextureRegionFactory.createTiledFromAsset(mBitmapTextureAtlas, this, "branch_long.png", 0, 33, 2, 1); // 32x32
+//		this.mBranchDoubleEndedTextureRegion = BitmapTextureAtlasTextureRegionFactory.createTiledFromAsset(mBitmapTextureAtlas, this, "branch_double_ended.png", 0, 66, 2, 1); // 32x32
+//		this.mBranchTripleEndedTextureRegion = BitmapTextureAtlasTextureRegionFactory.createTiledFromAsset(mBitmapTextureAtlas, this, "branch_triple_ended.png", 0, 99, 2, 1); // 32x32
+//		this.mBranchRootTextureRegion = BitmapTextureAtlasTextureRegionFactory.createTiledFromAsset(mBitmapTextureAtlas, this, "branch_root.png", 0, 131, 1, 1); // 32x32
 		mBitmapTextureAtlas.load();
 
-        BitmapTextureAtlas mMenuTextureAtlas = new BitmapTextureAtlas(this.getTextureManager(), 256, 128, TextureOptions.BILINEAR);
+        BitmapTextureAtlas mMenuTextureAtlas = new BitmapTextureAtlas(this.getTextureManager(), 200, 150, TextureOptions.BILINEAR);
         this.mMenuStartTextureRegion = BitmapTextureAtlasTextureRegionFactory.createFromAsset(mMenuTextureAtlas, this, "menu_reset.png", 0, 0);
-        this.mMenuQuitTextureRegion = BitmapTextureAtlasTextureRegionFactory.createFromAsset(mMenuTextureAtlas, this, "menu_quit.png", 0, 50);
+		this.mMenuButtonTextureRegion = BitmapTextureAtlasTextureRegionFactory.createFromAsset(mMenuTextureAtlas, this, "menu_button.png", 0, 50);
+        this.mMenuQuitTextureRegion = BitmapTextureAtlasTextureRegionFactory.createFromAsset(mMenuTextureAtlas, this, "menu_quit.png", 0, 100);
         mMenuTextureAtlas.load();
 	}
 
@@ -143,7 +146,7 @@ public class TreeGame extends SimpleBaseGameActivity implements ITreeMaster, Men
 		this.mGameScene = new Scene();
 		this.mGameScene.setBackground(new Background(0, 20, 20));
 
-        ButtonSprite pauseButton = new ButtonSprite(0 , 0, this.mMenuStartTextureRegion, this.getVertexBufferObjectManager()) {
+        ButtonSprite menuButton = new ButtonSprite(0 , 0, this.mMenuButtonTextureRegion, this.getVertexBufferObjectManager()) {
             @Override
             public boolean onAreaTouched(TouchEvent pSceneTouchEvent, float pTouchAreaLocalX, float pTouchAreaLocalY) {
                 showMenu(true);
@@ -151,7 +154,7 @@ public class TreeGame extends SimpleBaseGameActivity implements ITreeMaster, Men
                 return true;
             }
         };
-        pauseButton.setPosition(CAMERA_WIDTH - pauseButton.getWidth() / 2, CAMERA_HEIGHT - pauseButton.getHeight() / 2);
+        menuButton.setPosition(CAMERA_WIDTH - menuButton.getWidth() / 2, CAMERA_HEIGHT - menuButton.getHeight() / 2);
 
         // CREATE SCORE TEXT
         Font font = FontFactory.create(this.getFontManager(), this.getTextureManager(), 256, 256, TextureOptions.BILINEAR, Typeface.create(Typeface.DEFAULT, Typeface.BOLD), 32);
@@ -161,8 +164,8 @@ public class TreeGame extends SimpleBaseGameActivity implements ITreeMaster, Men
         mScoreText.setPosition(0 + mScoreText.getWidth() / 2, CAMERA_HEIGHT - mScoreText.getHeight() / 2);
         this.mGameScene.attachChild(mScoreText);
 
-        this.mGameScene.registerTouchArea(pauseButton);
-        this.mGameScene.attachChild(pauseButton);
+        this.mGameScene.registerTouchArea(menuButton);
+        this.mGameScene.attachChild(menuButton);
 
         showMenu();
         return this.mGameScene;
@@ -324,71 +327,77 @@ public class TreeGame extends SimpleBaseGameActivity implements ITreeMaster, Men
 		BranchType branchType = BranchType.Root;
 		BranchEntity.Side branchCorrectSide = BranchEntity.Side.Left;
 
-		for(int i = 0 ; i < rowCount; ++i )
-			for (int j = 0 ; j < columnCount ; ++j ) {
-				int vertexNumber = i * columnCount + j;
-				int summ = MathUtils.sum(levelMatrix[vertexNumber]);
+//		for(int i = 0 ; i < rowCount; ++i )
+//			for (int j = 0 ; j < columnCount ; ++j ) {
+//				int vertexNumber = i * columnCount + j;
+//				int summ = MathUtils.sum(levelMatrix[vertexNumber]);
+//
+//				if(summ == 1) {
+//					branchType = BranchType.Leaf;
+//					if(vertexNumber != 0 && levelMatrix[vertexNumber][vertexNumber - 1] == 1)
+//						branchCorrectSide = BranchEntity.Side.Left;
+//					else if( vertexNumber < vertexCount - 1 && levelMatrix[vertexNumber][vertexNumber + 1] == 1)
+//						branchCorrectSide = BranchEntity.Side.Right;
+//					else if(i > 0 && levelMatrix[vertexNumber][vertexNumber - columnCount] == 1)
+//						branchCorrectSide = BranchEntity.Side.Top;
+//					else if(i < rowCount - 1 && levelMatrix[vertexNumber][vertexNumber + columnCount] == 1)
+//						branchCorrectSide = BranchEntity.Side.Bottom;
+//				}
+//				else if(summ == 3) {
+//					branchType = BranchType.TripleEnded;
+//					if(i == 0 || i > 0 && levelMatrix[vertexNumber][vertexNumber - columnCount] == 0)
+//						branchCorrectSide = BranchEntity.Side.Right;
+//					else if(i == rowCount - 1 || i < rowCount - 1 && levelMatrix[vertexNumber][vertexNumber + columnCount] == 0)
+//						branchCorrectSide = BranchEntity.Side.Left;
+//					else if(levelMatrix[vertexNumber][vertexNumber - 1] == 0)
+//						branchCorrectSide = BranchEntity.Side.Top;
+//					else if(levelMatrix[vertexNumber][vertexNumber + 1] == 0)
+//						branchCorrectSide = BranchEntity.Side.Bottom;
+//				}
+//				else if (summ == 2) {
+//					branchType = BranchType.DoubleEnded;
+//					if(vertexNumber == 0
+//							|| ( i==0 && levelMatrix[vertexNumber][vertexNumber + 1] == 1)
+//							|| ( i < rowCount - 1 && levelMatrix[vertexNumber][vertexNumber + 1] == 1 && levelMatrix[vertexNumber][vertexNumber + columnCount] == 1))
+//						branchCorrectSide = BranchEntity.Side.Right;
+//					else if(vertexNumber == vertexCount - 1
+//							|| ( i > 0 && levelMatrix[vertexNumber][vertexNumber - 1] == 1 && levelMatrix[vertexNumber][vertexNumber - columnCount] == 1)
+//							|| ( i == rowCount - 1 && levelMatrix[vertexNumber][vertexNumber - 1] == 1))
+//						branchCorrectSide = BranchEntity.Side.Left;
+//					else if ( (i > 0 && levelMatrix[vertexNumber][vertexNumber + 1] == 1 && levelMatrix[vertexNumber][vertexNumber - columnCount] == 1)
+//							|| ( i == rowCount - 1 && levelMatrix[vertexNumber][vertexNumber + 1] == 1))
+//						branchCorrectSide = BranchEntity.Side.Top;
+//					else if (( i==0 && levelMatrix[vertexNumber][vertexNumber - 1] == 1)
+//							|| ( i < rowCount - 1 && levelMatrix[vertexNumber][vertexNumber - 1] == 1 && levelMatrix[vertexNumber][vertexNumber + columnCount] == 1))
+//						branchCorrectSide = BranchEntity.Side.Bottom;
+//
+//					if(j > 0 && j + 1  < columnCount) {
+//						if (levelMatrix[vertexNumber][vertexNumber - 1] == 1 && levelMatrix[vertexNumber][vertexNumber + 1] == 1) {
+//							branchType = BranchType.LongBranch;
+//							branchCorrectSide = BranchEntity.Side.Left;
+//						}
+//					}
+//
+//					if(i > 0 && i + 1 < rowCount) {
+//						if (levelMatrix[vertexNumber - columnCount][vertexNumber] == 1 && levelMatrix[vertexNumber + columnCount][vertexNumber] == 1) {
+//							branchType = BranchType.LongBranch;
+//							branchCorrectSide = BranchEntity.Side.Top;
+//						}
+//					}
+//
+//				}
+//
+//				mBranchMatrix[i][j] = addBranch(branchType, j , i, treePosition);
+//				mBranchCorrectAnswer[i][j] = branchCorrectSide;
+//			}
 
-				if(summ == 1) {
-					branchType = BranchType.Leaf;
-					if(vertexNumber != 0 && levelMatrix[vertexNumber][vertexNumber - 1] == 1)
-						branchCorrectSide = BranchEntity.Side.Left;
-					else if( vertexNumber < vertexCount - 1 && levelMatrix[vertexNumber][vertexNumber + 1] == 1)
-						branchCorrectSide = BranchEntity.Side.Right;
-					else if(i > 0 && levelMatrix[vertexNumber][vertexNumber - columnCount] == 1)
-						branchCorrectSide = BranchEntity.Side.Top;
-					else if(i < rowCount - 1 && levelMatrix[vertexNumber][vertexNumber + columnCount] == 1)
-						branchCorrectSide = BranchEntity.Side.Bottom;
-				}
-				else if(summ == 3) {
-					branchType = BranchType.TripleEnded;
-					if(i == 0 || i > 0 && levelMatrix[vertexNumber][vertexNumber - columnCount] == 0)
-						branchCorrectSide = BranchEntity.Side.Right;
-					else if(i == rowCount - 1 || i < rowCount - 1 && levelMatrix[vertexNumber][vertexNumber + columnCount] == 0)
-						branchCorrectSide = BranchEntity.Side.Left;
-					else if(levelMatrix[vertexNumber][vertexNumber - 1] == 0)
-						branchCorrectSide = BranchEntity.Side.Top;
-					else if(levelMatrix[vertexNumber][vertexNumber + 1] == 0)
-						branchCorrectSide = BranchEntity.Side.Bottom;
-				}
-				else if (summ == 2) {
-					branchType = BranchType.DoubleEnded;
-					if(vertexNumber == 0
-							|| ( i==0 && levelMatrix[vertexNumber][vertexNumber + 1] == 1)
-							|| ( i < rowCount - 1 && levelMatrix[vertexNumber][vertexNumber + 1] == 1 && levelMatrix[vertexNumber][vertexNumber + columnCount] == 1))
-						branchCorrectSide = BranchEntity.Side.Right;
-					else if(vertexNumber == vertexCount - 1
-							|| ( i > 0 && levelMatrix[vertexNumber][vertexNumber - 1] == 1 && levelMatrix[vertexNumber][vertexNumber - columnCount] == 1)
-							|| ( i == rowCount - 1 && levelMatrix[vertexNumber][vertexNumber - 1] == 1))
-						branchCorrectSide = BranchEntity.Side.Left;
-					else if ( (i > 0 && levelMatrix[vertexNumber][vertexNumber + 1] == 1 && levelMatrix[vertexNumber][vertexNumber - columnCount] == 1)
-							|| ( i == rowCount - 1 && levelMatrix[vertexNumber][vertexNumber + 1] == 1))
-						branchCorrectSide = BranchEntity.Side.Top;
-					else if (( i==0 && levelMatrix[vertexNumber][vertexNumber - 1] == 1)
-							|| ( i < rowCount - 1 && levelMatrix[vertexNumber][vertexNumber - 1] == 1 && levelMatrix[vertexNumber][vertexNumber + columnCount] == 1))
-						branchCorrectSide = BranchEntity.Side.Bottom;
+		addBranch(BranchType.LongBranch, 2 , 2, treePosition);
+		addBranch(BranchType.Leaf, 2 , 4, treePosition);
+		addBranch(BranchType.DoubleEnded, 2 , 6, treePosition);
+		addBranch(BranchType.Root, 2 , 8, treePosition);
+		addBranch(BranchType.TripleEnded, 2 , 10, treePosition);
 
-					if(j > 0 && j + 1  < columnCount) {
-						if (levelMatrix[vertexNumber][vertexNumber - 1] == 1 && levelMatrix[vertexNumber][vertexNumber + 1] == 1) {
-							branchType = BranchType.LongBranch;
-							branchCorrectSide = BranchEntity.Side.Left;
-						}
-					}
-
-					if(i > 0 && i + 1 < rowCount) {
-						if (levelMatrix[vertexNumber - columnCount][vertexNumber] == 1 && levelMatrix[vertexNumber + columnCount][vertexNumber] == 1) {
-							branchType = BranchType.LongBranch;
-							branchCorrectSide = BranchEntity.Side.Top;
-						}
-					}
-
-				}
-
-				mBranchMatrix[i][j] = addBranch(branchType, j , i, treePosition);
-				mBranchCorrectAnswer[i][j] = branchCorrectSide;
-			}
-
-		shakeTree(rowCount, columnCount);
+//		shakeTree(rowCount, columnCount);
 
 	}
 
@@ -410,7 +419,13 @@ public class TreeGame extends SimpleBaseGameActivity implements ITreeMaster, Men
     }
 
 	private BranchEntity addBranch(BranchType branchType, int columnNumber, int rowNumber, TreePosition treePosition) {
-		BranchEntity branchEntity = createBranchEntity(branchType, columnNumber, rowNumber, treePosition);
+        //TODO for test only
+        BranchEntity branchEntity = new BranchRoot(
+                columnNumber,
+                rowNumber,
+                treePosition,
+                mTestTextureRegion, mVertexBufferObjectManager, this);
+//		BranchEntity branchEntity = createBranchEntity(branchType, columnNumber, rowNumber, treePosition);
 		this.mGameScene.registerTouchArea(branchEntity);
 		this.mGameScene.attachChild(branchEntity);
 		return branchEntity;
