@@ -6,12 +6,9 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.widget.Toast;
 
-import com.busylee.treegame.branch.BranchDoubleEnded;
 import com.busylee.treegame.branch.BranchEntity;
-import com.busylee.treegame.branch.BranchLeaf;
-import com.busylee.treegame.branch.BranchLongEnded;
 import com.busylee.treegame.branch.BranchRoot;
-import com.busylee.treegame.branch.BranchTripleEnded;
+import com.busylee.treegame.branch.BranchType;
 
 import org.andengine.engine.camera.Camera;
 import org.andengine.engine.options.EngineOptions;
@@ -37,14 +34,19 @@ import org.andengine.opengl.texture.region.ITiledTextureRegion;
 import org.andengine.opengl.vbo.VertexBufferObjectManager;
 import org.andengine.ui.activity.SimpleBaseGameActivity;
 import org.andengine.util.adt.align.HorizontalAlign;
+import org.andengine.util.math.MathUtils;
 
 import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Random;
+
+import static com.busylee.treegame.branch.BranchType.*;
 
 /**
  * Created by busylee on 14.02.15.
  */
-public class TreeGame extends SimpleBaseGameActivity implements ITreeMaster, MenuScene.IOnMenuItemClickListener {
+public class TreeGame extends SimpleBaseGameActivity implements MenuScene.IOnMenuItemClickListener, TreeMaster.ITreeMasterObserver {
     // ===========================================================
     // Constants
     // ===========================================================
@@ -63,28 +65,19 @@ public class TreeGame extends SimpleBaseGameActivity implements ITreeMaster, Men
     // Fields
     // ===========================================================3
 
-    private BranchEntity[][] mBranchMatrix;
-	private BranchEntity.Side[][] mBranchCorrectAnswer;
-
-	private ITiledTextureRegion
-			mBranchRootTextureRegion,
-			mBranchLeafTextureRegion,
-			mBranchLongTextureRegion,
-			mBranchDoubleEndedTextureRegion,
-			mBranchTripleEndedTextureRegion,
-            mTestTextureRegion;
+	private Map<BranchType, ITiledTextureRegion> mBranchTilesMap;
 
     protected ITextureRegion mMenuStartTextureRegion;
 	protected ITextureRegion mMenuButtonTextureRegion;
     protected ITextureRegion mMenuQuitTextureRegion;
 
+	private Camera mCamera;
+
 	private Scene mGameScene;
     private MenuScene mMenuScene;
-
 	private VertexBufferObjectManager mVertexBufferObjectManager;
 
-	private BranchRoot mBranchRoot = null;
-    private Camera mCamera;
+	private TreeMaster mTreeHolder;
 
     private Text mScoreText;
 
@@ -106,7 +99,7 @@ public class TreeGame extends SimpleBaseGameActivity implements ITreeMaster, Men
         }
     };
 
-    // ===========================================================
+	// ===========================================================
     // AndEngine lifecycle methods
     // ===========================================================
 
@@ -123,13 +116,13 @@ public class TreeGame extends SimpleBaseGameActivity implements ITreeMaster, Men
 
 		this.mVertexBufferObjectManager = this.getVertexBufferObjectManager();
 
+		this.mBranchTilesMap = new HashMap<BranchType, ITiledTextureRegion>(5);
         BitmapTextureAtlas mBitmapTextureAtlas = new BitmapTextureAtlas(this.getTextureManager(),128, 64, TextureOptions.BILINEAR);
-        this.mTestTextureRegion = BitmapTextureAtlasTextureRegionFactory.createTiledFromAsset(mBitmapTextureAtlas, this, "test.png", 0, 0, 2, 1); // 32x32
-//		this.mBranchLeafTextureRegion = BitmapTextureAtlasTextureRegionFactory.createTiledFromAsset(mBitmapTextureAtlas, this, "branch_leaf.png", 0, 0, 2, 1); // 32x32
-//		this.mBranchLongTextureRegion = BitmapTextureAtlasTextureRegionFactory.createTiledFromAsset(mBitmapTextureAtlas, this, "branch_long.png", 0, 33, 2, 1); // 32x32
-//		this.mBranchDoubleEndedTextureRegion = BitmapTextureAtlasTextureRegionFactory.createTiledFromAsset(mBitmapTextureAtlas, this, "branch_double_ended.png", 0, 66, 2, 1); // 32x32
-//		this.mBranchTripleEndedTextureRegion = BitmapTextureAtlasTextureRegionFactory.createTiledFromAsset(mBitmapTextureAtlas, this, "branch_triple_ended.png", 0, 99, 2, 1); // 32x32
-//		this.mBranchRootTextureRegion = BitmapTextureAtlasTextureRegionFactory.createTiledFromAsset(mBitmapTextureAtlas, this, "branch_root.png", 0, 131, 1, 1); // 32x32
+		mBranchTilesMap.put(Leaf, BitmapTextureAtlasTextureRegionFactory.createTiledFromAsset(mBitmapTextureAtlas, this, "branch_leaf.png", 0, 0, 2, 1)); // 32x32
+		mBranchTilesMap.put(LongBranch, BitmapTextureAtlasTextureRegionFactory.createTiledFromAsset(mBitmapTextureAtlas, this, "branch_long.png", 0, 33, 2, 1)); // 32x32
+		mBranchTilesMap.put(DoubleEnded, BitmapTextureAtlasTextureRegionFactory.createTiledFromAsset(mBitmapTextureAtlas, this, "branch_double_ended.png", 0, 66, 2, 1)); // 32x32
+		mBranchTilesMap.put(TripleEnded, BitmapTextureAtlasTextureRegionFactory.createTiledFromAsset(mBitmapTextureAtlas, this, "branch_triple_ended.png", 0, 99, 2, 1)); // 32x32
+		mBranchTilesMap.put(Root, BitmapTextureAtlasTextureRegionFactory.createTiledFromAsset(mBitmapTextureAtlas, this, "branch_root.png", 0, 131, 1, 1)); // 32x32
 		mBitmapTextureAtlas.load();
 
         BitmapTextureAtlas mMenuTextureAtlas = new BitmapTextureAtlas(this.getTextureManager(), 200, 150, TextureOptions.BILINEAR);
@@ -145,6 +138,7 @@ public class TreeGame extends SimpleBaseGameActivity implements ITreeMaster, Men
 
 		this.mGameScene = new Scene();
 		this.mGameScene.setBackground(new Background(0, 20, 20));
+		this.mTreeHolder = new TreeMaster(this.mGameScene, this.mBranchTilesMap, this.mVertexBufferObjectManager, this);
 
         ButtonSprite menuButton = new ButtonSprite(0 , 0, this.mMenuButtonTextureRegion, this.getVertexBufferObjectManager()) {
             @Override
@@ -248,7 +242,6 @@ public class TreeGame extends SimpleBaseGameActivity implements ITreeMaster, Men
     // ===========================================================
 
     private synchronized void startGame() {
-        mBranchRoot = null;
         removeTree();
         showTree();
         resetTimer();
@@ -274,7 +267,8 @@ public class TreeGame extends SimpleBaseGameActivity implements ITreeMaster, Men
         });
     }
 
-    private void onGameWin() {
+	@Override
+    public void onGameWin() {
         stopTimer();
         //todo stub
         runOnUiThread(new Runnable() {
@@ -317,218 +311,19 @@ public class TreeGame extends SimpleBaseGameActivity implements ITreeMaster, Men
                 ( ( CAMERA_HEIGHT - scoreHeight ) - rowCount * BranchEntity.BRANCH_HEIGHT ) / 2;
         treePosition.xFrom = (CAMERA_WIDTH - columnCount * BranchEntity.BRANCH_WIDTH ) / 2;
 
-		int vertexCount = rowCount * columnCount;
+		int[][] levelMatrix = LevelMatrixGenerator.generateLevelMatrix(rowCount, columnCount);
 
-		mBranchMatrix = new BranchEntity[rowCount][columnCount];
-		mBranchCorrectAnswer = new BranchEntity.Side[rowCount][columnCount];
-
-        int[][] levelMatrix = LevelMatrixGenerator.generateLevelMatrix(rowCount, columnCount);
-
-		BranchType branchType = BranchType.Root;
-		BranchEntity.Side branchCorrectSide = BranchEntity.Side.Left;
-
-//		for(int i = 0 ; i < rowCount; ++i )
-//			for (int j = 0 ; j < columnCount ; ++j ) {
-//				int vertexNumber = i * columnCount + j;
-//				int summ = MathUtils.sum(levelMatrix[vertexNumber]);
-//
-//				if(summ == 1) {
-//					branchType = BranchType.Leaf;
-//					if(vertexNumber != 0 && levelMatrix[vertexNumber][vertexNumber - 1] == 1)
-//						branchCorrectSide = BranchEntity.Side.Left;
-//					else if( vertexNumber < vertexCount - 1 && levelMatrix[vertexNumber][vertexNumber + 1] == 1)
-//						branchCorrectSide = BranchEntity.Side.Right;
-//					else if(i > 0 && levelMatrix[vertexNumber][vertexNumber - columnCount] == 1)
-//						branchCorrectSide = BranchEntity.Side.Top;
-//					else if(i < rowCount - 1 && levelMatrix[vertexNumber][vertexNumber + columnCount] == 1)
-//						branchCorrectSide = BranchEntity.Side.Bottom;
-//				}
-//				else if(summ == 3) {
-//					branchType = BranchType.TripleEnded;
-//					if(i == 0 || i > 0 && levelMatrix[vertexNumber][vertexNumber - columnCount] == 0)
-//						branchCorrectSide = BranchEntity.Side.Right;
-//					else if(i == rowCount - 1 || i < rowCount - 1 && levelMatrix[vertexNumber][vertexNumber + columnCount] == 0)
-//						branchCorrectSide = BranchEntity.Side.Left;
-//					else if(levelMatrix[vertexNumber][vertexNumber - 1] == 0)
-//						branchCorrectSide = BranchEntity.Side.Top;
-//					else if(levelMatrix[vertexNumber][vertexNumber + 1] == 0)
-//						branchCorrectSide = BranchEntity.Side.Bottom;
-//				}
-//				else if (summ == 2) {
-//					branchType = BranchType.DoubleEnded;
-//					if(vertexNumber == 0
-//							|| ( i==0 && levelMatrix[vertexNumber][vertexNumber + 1] == 1)
-//							|| ( i < rowCount - 1 && levelMatrix[vertexNumber][vertexNumber + 1] == 1 && levelMatrix[vertexNumber][vertexNumber + columnCount] == 1))
-//						branchCorrectSide = BranchEntity.Side.Right;
-//					else if(vertexNumber == vertexCount - 1
-//							|| ( i > 0 && levelMatrix[vertexNumber][vertexNumber - 1] == 1 && levelMatrix[vertexNumber][vertexNumber - columnCount] == 1)
-//							|| ( i == rowCount - 1 && levelMatrix[vertexNumber][vertexNumber - 1] == 1))
-//						branchCorrectSide = BranchEntity.Side.Left;
-//					else if ( (i > 0 && levelMatrix[vertexNumber][vertexNumber + 1] == 1 && levelMatrix[vertexNumber][vertexNumber - columnCount] == 1)
-//							|| ( i == rowCount - 1 && levelMatrix[vertexNumber][vertexNumber + 1] == 1))
-//						branchCorrectSide = BranchEntity.Side.Top;
-//					else if (( i==0 && levelMatrix[vertexNumber][vertexNumber - 1] == 1)
-//							|| ( i < rowCount - 1 && levelMatrix[vertexNumber][vertexNumber - 1] == 1 && levelMatrix[vertexNumber][vertexNumber + columnCount] == 1))
-//						branchCorrectSide = BranchEntity.Side.Bottom;
-//
-//					if(j > 0 && j + 1  < columnCount) {
-//						if (levelMatrix[vertexNumber][vertexNumber - 1] == 1 && levelMatrix[vertexNumber][vertexNumber + 1] == 1) {
-//							branchType = BranchType.LongBranch;
-//							branchCorrectSide = BranchEntity.Side.Left;
-//						}
-//					}
-//
-//					if(i > 0 && i + 1 < rowCount) {
-//						if (levelMatrix[vertexNumber - columnCount][vertexNumber] == 1 && levelMatrix[vertexNumber + columnCount][vertexNumber] == 1) {
-//							branchType = BranchType.LongBranch;
-//							branchCorrectSide = BranchEntity.Side.Top;
-//						}
-//					}
-//
-//				}
-//
-//				mBranchMatrix[i][j] = addBranch(branchType, j , i, treePosition);
-//				mBranchCorrectAnswer[i][j] = branchCorrectSide;
-//			}
-
-		addBranch(BranchType.LongBranch, 2 , 2, treePosition);
-		addBranch(BranchType.Leaf, 2 , 4, treePosition);
-		addBranch(BranchType.DoubleEnded, 2 , 6, treePosition);
-		addBranch(BranchType.Root, 2 , 8, treePosition);
-		addBranch(BranchType.TripleEnded, 2 , 10, treePosition);
-
-//		shakeTree(rowCount, columnCount);
+		mTreeHolder.initTree(treePosition, columnCount, rowCount, levelMatrix);
+		mTreeHolder.shakeTree();
 
 	}
 
-	private void shakeTree(int rowCount, int columnCount) {
-        final Random random = new Random(System.currentTimeMillis());
-		for(int i = 0; i < rowCount; ++i)
-			for(int j = 0; j < columnCount; ++j)
-				mBranchMatrix[i][j].setAnchorSide(BranchEntity.Side.valueOf(random.nextInt(4)));
-
-        mBranchRoot.updateAliveState(BranchEntity.Side.Left);
-	}
-
-	private void showCorrectAnswer(int rowCount, int columnCount) {
-        for (int i = 0; i < rowCount; ++i)
-            for (int j = 0; j < columnCount; ++j)
-                mBranchMatrix[i][j].setAnchorSide(mBranchCorrectAnswer[i][j]);
-
-        mBranchRoot.updateAliveState(BranchEntity.Side.Left);
+	private void showCorrectAnswer() {
+        this.mTreeHolder.showCorrectAnswer();
     }
 
-	private BranchEntity addBranch(BranchType branchType, int columnNumber, int rowNumber, TreePosition treePosition) {
-        //TODO for test only
-        BranchEntity branchEntity = new BranchRoot(
-                columnNumber,
-                rowNumber,
-                treePosition,
-                mTestTextureRegion, mVertexBufferObjectManager, this);
-//		BranchEntity branchEntity = createBranchEntity(branchType, columnNumber, rowNumber, treePosition);
-		this.mGameScene.registerTouchArea(branchEntity);
-		this.mGameScene.attachChild(branchEntity);
-		return branchEntity;
-	}
-
-	@Override
-	public void onBranchTouched() {
-		deathAllBranches();
-		mBranchRoot.updateAliveState(BranchEntity.Side.Left);
-
-		if(checkWin())
-			onGameWin();
-
-	}
-
 	private void removeTree() {
-        if(mBranchMatrix != null)
-            for(int i = 0 ; i < mBranchMatrix.length; ++i)
-                for (int j = 0; j < mBranchMatrix[i].length; ++j)
-                    if(mBranchMatrix[i][j] != null) {
-                        mGameScene.unregisterTouchArea(mBranchMatrix[i][j]);
-                        mBranchMatrix[i][j].detachSelf();
-                        mBranchMatrix[i][j].dispose();
-                    }
+		this.mTreeHolder.removeTree();
 	}
 
-	private void deathAllBranches() {
-		for(int i = 0 ; i < mBranchMatrix.length; ++i)
-			for (int j = 0; j < mBranchMatrix[i].length; ++j)
-				mBranchMatrix[i][j].setAliveState(false);
-	}
-
-	private boolean checkWin() {
-		for(int i = 0 ; i < mBranchMatrix.length; ++i)
-			for (int j = 0; j < mBranchMatrix[i].length; ++j)
-				if(!mBranchMatrix[i][j].isAlive())
-					return false;
-
-		return true;
-	}
-
-	private BranchEntity createBranchEntity(BranchType branchType, int columnNumber, int rowNumber, TreePosition treePosition) {
-		BranchEntity branchEntity = null;
-
-		switch (branchType) {
-            case Root:
-			case Leaf:
-				if(mBranchRoot == null) {
-					mBranchRoot = new BranchRoot(
-							columnNumber,
-							rowNumber,
-                            treePosition,
-							mBranchRootTextureRegion, mVertexBufferObjectManager, this);
-					branchEntity = mBranchRoot;
-					break;
-				}
-
-				branchEntity = new BranchLeaf(
-						columnNumber,
-						rowNumber,
-                        treePosition,
-						mBranchLeafTextureRegion, mVertexBufferObjectManager, this);
-				break;
-			case LongBranch:
-				branchEntity = new BranchLongEnded(
-						columnNumber,
-						rowNumber,
-                        treePosition,
-						mBranchLongTextureRegion, mVertexBufferObjectManager, this);
-				break;
-			case DoubleEnded:
-				branchEntity = new BranchDoubleEnded(
-						columnNumber,
-						rowNumber,
-                        treePosition,
-						mBranchDoubleEndedTextureRegion, mVertexBufferObjectManager, this);
-				break;
-			case TripleEnded:
-				branchEntity = new BranchTripleEnded(
-						columnNumber,
-						rowNumber,
-                        treePosition,
-						mBranchTripleEndedTextureRegion, mVertexBufferObjectManager, this);
-				break;
-
-
-		}
-
-		return branchEntity;
-	}
-
-	@Override
-	public BranchEntity getBranch(int i, int j) {
-		if(i >= 0 && i < mBranchMatrix.length && j >= 0 && j < mBranchMatrix[0].length)
-			return mBranchMatrix[i][j];
-		else return null;
-	}
-
-    enum BranchType {
-		Root,
-		Leaf,
-		LongBranch,
-		DoubleEnded,
-		TripleEnded
-	}
 }
