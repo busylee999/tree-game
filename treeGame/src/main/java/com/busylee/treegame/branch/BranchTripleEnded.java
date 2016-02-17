@@ -44,8 +44,8 @@ public class BranchTripleEnded extends BranchEntity {
 		branchVariants.put(Side.Bottom, connectSides);
 	}
 
-	public BranchTripleEnded(int columnNumber, int rowNumber, TreePosition treePosition, ITiledTextureRegion pTextureRegion, VertexBufferObjectManager pVertexBufferObjectManager, ITreeMaster treeMaster) {
-        super(columnNumber, rowNumber, treePosition, pTextureRegion, pVertexBufferObjectManager, treeMaster);
+	public BranchTripleEnded(int columnNumber, int rowNumber, TreePosition treePosition, ITiledTextureRegion pTextureRegion, VertexBufferObjectManager pVertexBufferObjectManager, int branchSize, ITreeMaster treeMaster) {
+        super(columnNumber, rowNumber, treePosition, pTextureRegion, pVertexBufferObjectManager, branchSize, treeMaster);
     }
 
 	@Override

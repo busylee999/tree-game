@@ -19,8 +19,8 @@ class TreeMaster(
 
     var mBranchRoot: BranchEntity? = null
 
-    lateinit var mBranchMatrix : Array<Array<BranchEntity>>
-    lateinit var mBranchCorrectAnswer : Array<Array<BranchEntity.Side>>
+    var mBranchMatrix : Array<Array<BranchEntity>> = arrayOf(arrayOf())
+    var mBranchCorrectAnswer : Array<Array<BranchEntity.Side>> = arrayOf(arrayOf())
 
     override fun getBranch(i: Int, j: Int): BranchEntity? {
         if (i >= 0 && i < mBranchMatrix.size && j >= 0 && j < mBranchMatrix[0].size)
@@ -31,20 +31,20 @@ class TreeMaster(
 
     override fun onBranchTouched() {
         deathAllBranches()
-        mBranchRoot!!.updateAliveState(BranchEntity.Side.Left)
+        mBranchRoot?.updateAliveState(BranchEntity.Side.Left)
 
         if (checkWin())
             mTreeMasterObserver.onGameWin()
     }
 
-    fun initTree(treePosition: TreePosition, columnCount: Int, rowCount: Int, levelMatrix: Array<IntArray>) {
+    fun initTree(branchSize: Int, treePosition: TreePosition, columnCount: Int, rowCount: Int, levelMatrix: Array<IntArray>) {
         val vertexCount = columnCount * rowCount;
 
         var branchType = Root
         var branchCorrectSide: BranchEntity.Side = BranchEntity.Side.Left
 
-        for (i in 0..rowCount - 1)
-            for (j in 0..columnCount - 1) {
+        val initFunc = {
+            i: Int, j: Int ->
                 val vertexNumber = i * columnCount + j
                 val summ = MathUtils.sum(levelMatrix[vertexNumber])
 
@@ -99,13 +99,35 @@ class TreeMaster(
 
                 }
 
-                mBranchMatrix[i][j] = addBranch(branchType, j, i, treePosition)
-                mBranchCorrectAnswer[i][j] = branchCorrectSide
+                addBranch(branchType, j, i, treePosition, branchCorrectSide, branchSize)
+//                createBranchEntity(branchType, j, i, treePosition, this)
             }
+
+        mBranchMatrix = Array(rowCount) {
+            i ->
+                Array(columnCount) {
+                    j ->
+                        initFunc(i, j)
+                }
+        }
+
+//        addBranch(Leaf, 5, 1, treePosition, BranchEntity.Side.Left)
+//        addBranch(LongBranch, 5, 3, treePosition, BranchEntity.Side.Left)
+//        addBranch(DoubleEnded, 5, 6, treePosition, BranchEntity.Side.Left)
+//        addBranch(TripleEnded, 5, 7, treePosition, BranchEntity.Side.Left)
+
+        mBranchCorrectAnswer = Array(rowCount) {
+            i ->
+                Array(columnCount) {
+                    j ->
+                        mBranchMatrix[i][j].anchorSide
+                }
+        }
     }
 
-    fun addBranch(branchType: BranchType, columnNumber: Int, rowNumber: Int, treePosition: TreePosition): BranchEntity {
-        val branchEntity = createBranchEntity(branchType, columnNumber, rowNumber, treePosition, this)
+    fun addBranch(branchType: BranchType, columnNumber: Int, rowNumber: Int, treePosition: TreePosition, side: BranchEntity.Side, branchSize: Int): BranchEntity {
+        val branchEntity = createBranchEntity(branchType, columnNumber, rowNumber, treePosition, branchSize, this)
+        branchEntity.anchorSide = side
         this.mGameScene.registerTouchArea(branchEntity)
         this.mGameScene.attachChild(branchEntity)
         return branchEntity
@@ -117,27 +139,25 @@ class TreeMaster(
             for (j in 0..mBranchMatrix[i].size - 1)
                 mBranchMatrix[i][j].setAnchorSide(BranchEntity.Side.valueOf(random.nextInt(4)))
 
-        mBranchRoot!!.updateAliveState(BranchEntity.Side.Left)
+        mBranchRoot?.updateAliveState(BranchEntity.Side.Left)
     }
 
     fun showCorrectAnswer() {
         for (i in mBranchMatrix.indices)
             for (j in 0..mBranchMatrix[i].size - 1)
-                mBranchMatrix[i][j].setAnchorSide(mBranchCorrectAnswer[i][j])
+                mBranchMatrix[i][j].anchorSide = mBranchCorrectAnswer[i][j]
 
-        mBranchRoot!!.updateAliveState(BranchEntity.Side.Left)
+        mBranchRoot?.updateAliveState(BranchEntity.Side.Left)
     }
 
     fun removeTree() {
         mBranchRoot = null
-        if (mBranchMatrix != null)
             for (i in mBranchMatrix.indices)
-                for (j in 0..mBranchMatrix[i].size - 1)
-                    if (mBranchMatrix[i][j] != null) {
-                        mGameScene.unregisterTouchArea(mBranchMatrix[i][j])
-                        mBranchMatrix[i][j].detachSelf()
-                        mBranchMatrix[i][j].dispose()
-                    }
+                for (j in 0..mBranchMatrix[i].size - 1) {
+                    mGameScene.unregisterTouchArea(mBranchMatrix[i][j])
+                    mBranchMatrix[i][j].detachSelf()
+                    mBranchMatrix[i][j].dispose()
+                }
     }
 
     fun deathAllBranches() {
@@ -156,40 +176,42 @@ class TreeMaster(
     }
 
 
-    fun createBranchEntity(branchType: BranchType, columnNumber: Int, rowNumber: Int, treePosition: TreePosition, treeMaster: ITreeMaster): BranchEntity {
-        var branchEntity: BranchEntity? = null
+    fun createBranchEntity(branchType: BranchType, columnNumber: Int, rowNumber: Int, treePosition: TreePosition, branchSize: Int, treeMaster: ITreeMaster): BranchEntity {
+        var branchEntity: BranchEntity
 
-        when (branchType) {
-            Root, Leaf -> {
-                if (mBranchRoot == null) {
-                    mBranchRoot = BranchRoot(
-                            columnNumber,
-                            rowNumber,
-                            treePosition,
-                            mSpriteTextures[branchType], mVertexBufferObjectManager, treeMaster)
-                    branchEntity = mBranchRoot
-                }
-
-
+        if (branchType == Root || branchType == Leaf) {
+            if (mBranchRoot == null) {
+                branchEntity = BranchRoot(
+                        columnNumber,
+                        rowNumber,
+                        treePosition,
+                        mSpriteTextures[Leaf], mVertexBufferObjectManager, branchSize, treeMaster)
+                mBranchRoot = branchEntity
+            } else {
+                branchEntity = BranchLeaf(
+                        columnNumber,
+                        rowNumber,
+                        treePosition,
+                        mSpriteTextures[Leaf], mVertexBufferObjectManager, branchSize, treeMaster)
             }
-            LongBranch -> branchEntity = BranchLongEnded(
-                    columnNumber,
-                    rowNumber,
-                    treePosition,
-                    mSpriteTextures.get(branchType), mVertexBufferObjectManager, treeMaster)
-            DoubleEnded -> branchEntity = BranchDoubleEnded(
-                    columnNumber,
-                    rowNumber,
-                    treePosition,
-                    mSpriteTextures.get(branchType), mVertexBufferObjectManager, treeMaster)
-            TripleEnded -> branchEntity = BranchTripleEnded(
-                    columnNumber,
-                    rowNumber,
-                    treePosition,
-                    mSpriteTextures.get(branchType), mVertexBufferObjectManager, treeMaster)
         }
+        else if (branchType == LongBranch) branchEntity = BranchLongEnded(
+                columnNumber,
+                rowNumber,
+                treePosition,
+                mSpriteTextures[branchType], mVertexBufferObjectManager, branchSize, treeMaster)
+        else if (branchType == DoubleEnded) branchEntity = BranchDoubleEnded(
+                columnNumber,
+                rowNumber,
+                treePosition,
+                mSpriteTextures[branchType], mVertexBufferObjectManager, branchSize, treeMaster)
+        else branchEntity = BranchTripleEnded(
+                columnNumber,
+                rowNumber,
+                treePosition,
+                mSpriteTextures[branchType], mVertexBufferObjectManager, branchSize, treeMaster)
 
-        return branchEntity!!
+        return branchEntity
     }
 
     interface  ITreeMasterObserver {

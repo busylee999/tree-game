@@ -47,9 +47,6 @@ public abstract class BranchEntity extends TiledSprite {
 		}
 	}
 
-	public static final int BRANCH_WIDTH = 50;
-	public static final int BRANCH_HEIGHT = 50;
-
 	public static final int DEGREE_90 = 90;
 	public static final int DEGREE_360 = 360;
 
@@ -61,10 +58,10 @@ public abstract class BranchEntity extends TiledSprite {
 
 	private ITreeMaster mTreeMaster;
 
-	public BranchEntity(int columnNumber, int rowNumber, TreePosition treePosition, ITiledTextureRegion pTextureRegion, VertexBufferObjectManager pVertexBufferObjectManager, ITreeMaster treeMaster) {
-		super(treePosition.xFrom + columnNumber * BranchEntity.BRANCH_WIDTH + BranchEntity.BRANCH_WIDTH / 2,
-				treePosition.yFrom - rowNumber * BranchEntity.BRANCH_HEIGHT - BranchEntity.BRANCH_HEIGHT / 2,
-				BranchEntity.BRANCH_WIDTH, BranchEntity.BRANCH_WIDTH, pTextureRegion, pVertexBufferObjectManager);
+	public BranchEntity(int columnNumber, int rowNumber, TreePosition treePosition, ITiledTextureRegion pTextureRegion, VertexBufferObjectManager pVertexBufferObjectManager, int branchSize, ITreeMaster treeMaster) {
+		super(treePosition.xFrom + columnNumber * branchSize + branchSize / 2,
+				treePosition.yFrom - rowNumber * branchSize - branchSize / 2,
+                branchSize, branchSize, pTextureRegion, pVertexBufferObjectManager);
 		mTreeMaster = treeMaster;
 		this.columnNumber = columnNumber;
 		this.rowNumber = rowNumber;
@@ -167,4 +164,7 @@ public abstract class BranchEntity extends TiledSprite {
 		return mTreeMaster.getBranch(i, j);
 	}
 
+	public Side getAnchorSide() {
+        return anchorSide;
+    }
 }

@@ -4,10 +4,9 @@ import android.graphics.Typeface;
 import android.opengl.GLES20;
 import android.os.Bundle;
 import android.os.Handler;
+import android.util.DisplayMetrics;
 import android.widget.Toast;
 
-import com.busylee.treegame.branch.BranchEntity;
-import com.busylee.treegame.branch.BranchRoot;
 import com.busylee.treegame.branch.BranchType;
 
 import org.andengine.engine.camera.Camera;
@@ -34,12 +33,10 @@ import org.andengine.opengl.texture.region.ITiledTextureRegion;
 import org.andengine.opengl.vbo.VertexBufferObjectManager;
 import org.andengine.ui.activity.SimpleBaseGameActivity;
 import org.andengine.util.adt.align.HorizontalAlign;
-import org.andengine.util.math.MathUtils;
 
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Random;
 
 import static com.busylee.treegame.branch.BranchType.*;
 
@@ -53,13 +50,23 @@ public class TreeGame extends SimpleBaseGameActivity implements MenuScene.IOnMen
 
     protected static final int MENU_START = 0;
     protected static final int MENU_QUIT = MENU_START + 1;
-    protected static final int MENU_CONTINUE = MENU_START + 2;
+    protected static final int MENU_RESUME = MENU_START + 2;
+    protected static final int MENU_LEVEL = MENU_START + 3;
+
+    protected static final int MENU_LEVEL_1 = MENU_START + 4;
+    protected static final int MENU_LEVEL_2 = MENU_START + 5;
+    protected static final int MENU_LEVEL_3 = MENU_START + 6;
+    protected static final int MENU_BACK = MENU_START + 7;
+
+    protected static final int LEVEL_1 = 1;
+    protected static final int LEVEL_2 = 2;
+    protected static final int LEVEL_3 = 3;
 
     protected static final int TIMER_INTERVAL = 1000; //1000 ms
     protected static final int SCORE_LIMIT_IN_SEC = 60 * 5; // 5 min
 
-    private static final int CAMERA_WIDTH = 480;
-    private static final int CAMERA_HEIGHT = 720;
+//    private static final int mCameraWidth = 480;
+//    private static final int mCameraHeight = 720;
 
     // ===========================================================
     // Fields
@@ -83,6 +90,14 @@ public class TreeGame extends SimpleBaseGameActivity implements MenuScene.IOnMen
 
     private int mScore;
     private boolean mTimer;
+
+    private int mCameraWidth;
+    private int mCameraHeight;
+
+    private int mMenuWidth;
+    private int mMenuHeight;
+
+    private int level = 1;
 
     private Handler mHandler;
     private Runnable mTimerRunnable = new Runnable() {
@@ -117,12 +132,12 @@ public class TreeGame extends SimpleBaseGameActivity implements MenuScene.IOnMen
 		this.mVertexBufferObjectManager = this.getVertexBufferObjectManager();
 
 		this.mBranchTilesMap = new HashMap<BranchType, ITiledTextureRegion>(5);
-        BitmapTextureAtlas mBitmapTextureAtlas = new BitmapTextureAtlas(this.getTextureManager(),128, 64, TextureOptions.BILINEAR);
-		mBranchTilesMap.put(Leaf, BitmapTextureAtlasTextureRegionFactory.createTiledFromAsset(mBitmapTextureAtlas, this, "branch_leaf.png", 0, 0, 2, 1)); // 32x32
-		mBranchTilesMap.put(LongBranch, BitmapTextureAtlasTextureRegionFactory.createTiledFromAsset(mBitmapTextureAtlas, this, "branch_long.png", 0, 33, 2, 1)); // 32x32
-		mBranchTilesMap.put(DoubleEnded, BitmapTextureAtlasTextureRegionFactory.createTiledFromAsset(mBitmapTextureAtlas, this, "branch_double_ended.png", 0, 66, 2, 1)); // 32x32
-		mBranchTilesMap.put(TripleEnded, BitmapTextureAtlasTextureRegionFactory.createTiledFromAsset(mBitmapTextureAtlas, this, "branch_triple_ended.png", 0, 99, 2, 1)); // 32x32
-		mBranchTilesMap.put(Root, BitmapTextureAtlasTextureRegionFactory.createTiledFromAsset(mBitmapTextureAtlas, this, "branch_root.png", 0, 131, 1, 1)); // 32x32
+        BitmapTextureAtlas mBitmapTextureAtlas = new BitmapTextureAtlas(this.getTextureManager(), 128, 260, TextureOptions.DEFAULT);
+		mBranchTilesMap.put(Leaf, BitmapTextureAtlasTextureRegionFactory.createTiledFromAsset(mBitmapTextureAtlas, this, "branch_leaf.png", 0, 1, 2, 1)); // 32x32
+		mBranchTilesMap.put(LongBranch, BitmapTextureAtlasTextureRegionFactory.createTiledFromAsset(mBitmapTextureAtlas, this, "branch_long.png", 0, 66, 2, 1)); // 32x32
+		mBranchTilesMap.put(DoubleEnded, BitmapTextureAtlasTextureRegionFactory.createTiledFromAsset(mBitmapTextureAtlas, this, "branch_double_ended.png", 0,131, 2, 1)); // 32x32
+		mBranchTilesMap.put(TripleEnded, BitmapTextureAtlasTextureRegionFactory.createTiledFromAsset(mBitmapTextureAtlas, this, "branch_triple_ended.png", 0, 196, 2, 1)); // 32x32
+//		mBranchTilesMap.put(Root, BitmapTextureAtlasTextureRegionFactory.createTiledFromAsset(mBitmapTextureAtlas, this, "branch_leaf.png", 0, 131, 1, 1)); // 32x32
 		mBitmapTextureAtlas.load();
 
         BitmapTextureAtlas mMenuTextureAtlas = new BitmapTextureAtlas(this.getTextureManager(), 200, 150, TextureOptions.BILINEAR);
@@ -148,14 +163,14 @@ public class TreeGame extends SimpleBaseGameActivity implements MenuScene.IOnMen
                 return true;
             }
         };
-        menuButton.setPosition(CAMERA_WIDTH - menuButton.getWidth() / 2, CAMERA_HEIGHT - menuButton.getHeight() / 2);
+        menuButton.setPosition(mCameraWidth - menuButton.getWidth() / 2, mCameraHeight - menuButton.getHeight() / 2);
 
         // CREATE SCORE TEXT
         Font font = FontFactory.create(this.getFontManager(), this.getTextureManager(), 256, 256, TextureOptions.BILINEAR, Typeface.create(Typeface.DEFAULT, Typeface.BOLD), 32);
         font.load();
 
-        mScoreText = new Text(0, CAMERA_HEIGHT, font, "Score: 0123456789", new TextOptions(HorizontalAlign.LEFT), this.getVertexBufferObjectManager());
-        mScoreText.setPosition(0 + mScoreText.getWidth() / 2, CAMERA_HEIGHT - mScoreText.getHeight() / 2);
+        mScoreText = new Text(0, mCameraHeight, font, "Score: 0123456789", new TextOptions(HorizontalAlign.LEFT), this.getVertexBufferObjectManager());
+        mScoreText.setPosition(0 + mScoreText.getWidth() / 2, mCameraHeight - mScoreText.getHeight() / 2);
         this.mGameScene.attachChild(mScoreText);
 
         this.mGameScene.registerTouchArea(menuButton);
@@ -169,36 +184,21 @@ public class TreeGame extends SimpleBaseGameActivity implements MenuScene.IOnMen
 
     @Override
     public EngineOptions onCreateEngineOptions() {
-        mCamera = new Camera(0, 0, CAMERA_WIDTH, CAMERA_HEIGHT);
+        DisplayMetrics metrics = new DisplayMetrics();
+        getWindowManager().getDefaultDisplay().getMetrics(metrics);
+        mCameraWidth = metrics.widthPixels;
+        mCameraHeight = metrics.heightPixels;
+        mMenuWidth = mCameraWidth / 4;
+        mMenuHeight = mCameraHeight / 8;
+        mCamera = new Camera(0, 0, mCameraWidth, mCameraHeight);
 
         return new EngineOptions(true, ScreenOrientation.PORTRAIT_FIXED,  new FillResolutionPolicy(), mCamera);
     }
 
     @Override
-    public boolean onMenuItemClicked(MenuScene pMenuScene, IMenuItem pMenuItem, float pMenuItemLocalX, float pMenuItemLocalY) {
-        switch(pMenuItem.getID()) {
-            case MENU_START:
-                this.mGameScene.clearChildScene();
-                startGame();
-                return true;
-            case MENU_CONTINUE:
-                this.mGameScene.clearChildScene();
-                continueGame();
-                return true;
-            case MENU_QUIT:
-                stopTimer();
-				/* End Activity. */
-                this.finish();
-                return true;
-            default:
-                return false;
-        }
-    }
-
-    @Override
     public synchronized void onPauseGame() {
         super.onPauseGame();
-//        showMenu(true);
+        showMenu(true);
     }
 
     // ===========================================================
@@ -212,29 +212,116 @@ public class TreeGame extends SimpleBaseGameActivity implements MenuScene.IOnMen
     private void showMenu(boolean isPause) {
         this.mMenuScene = new MenuScene(this.mCamera);
 
+        int menuButtonWidth = mMenuWidth;
+        int menuButtonHeight = mMenuHeight;
+
         if(isPause) {
-            final SpriteMenuItem continueMenuItem = new SpriteMenuItem(MENU_CONTINUE, this.mMenuStartTextureRegion, this.getVertexBufferObjectManager());
+            final SpriteMenuItem continueMenuItem = new SpriteMenuItem(MENU_RESUME, menuButtonWidth, menuButtonHeight, this.mMenuStartTextureRegion, this.getVertexBufferObjectManager());
             continueMenuItem.setBlendFunction(GLES20.GL_SRC_ALPHA, GLES20.GL_ONE_MINUS_SRC_ALPHA);
-            continueMenuItem.setPosition(CAMERA_WIDTH / 2, CAMERA_HEIGHT / 2);
+            continueMenuItem.setPosition(mCameraWidth / 2, mCameraHeight / 2);
             this.mMenuScene.addMenuItem(continueMenuItem);
         }
 
-        final SpriteMenuItem newGameMenuItem = new SpriteMenuItem(MENU_START, this.mMenuStartTextureRegion, this.getVertexBufferObjectManager());
+        final SpriteMenuItem newGameMenuItem = new SpriteMenuItem(MENU_START, menuButtonWidth, menuButtonHeight, this.mMenuStartTextureRegion, this.getVertexBufferObjectManager());
         newGameMenuItem.setBlendFunction(GLES20.GL_SRC_ALPHA, GLES20.GL_ONE_MINUS_SRC_ALPHA);
-        newGameMenuItem.setPosition(CAMERA_WIDTH / 2, CAMERA_HEIGHT / 2);
+        newGameMenuItem.setPosition(mCameraWidth / 2, mCameraHeight / 2);
         this.mMenuScene.addMenuItem(newGameMenuItem);
 
-        final SpriteMenuItem quitMenuItem = new SpriteMenuItem(MENU_QUIT, this.mMenuQuitTextureRegion, this.getVertexBufferObjectManager());
+        final SpriteMenuItem levelChangeItem = new SpriteMenuItem(MENU_LEVEL, menuButtonWidth, menuButtonHeight, this.mBranchTilesMap.get(Leaf), this.getVertexBufferObjectManager());
+        levelChangeItem.setBlendFunction(GLES20.GL_SRC_ALPHA, GLES20.GL_ONE_MINUS_SRC_ALPHA);
+        levelChangeItem.setPosition(mCameraWidth / 2, mCameraHeight / 2);
+        this.mMenuScene.addMenuItem(levelChangeItem);
+
+        final SpriteMenuItem quitMenuItem = new SpriteMenuItem(MENU_QUIT, menuButtonWidth, menuButtonHeight, this.mMenuQuitTextureRegion, this.getVertexBufferObjectManager());
         quitMenuItem.setBlendFunction(GLES20.GL_SRC_ALPHA, GLES20.GL_ONE_MINUS_SRC_ALPHA);
         this.mMenuScene.addMenuItem(quitMenuItem);
 
         this.mMenuScene.buildAnimations();
 
-        this.mMenuScene.setBackgroundEnabled(false);
+        this.mMenuScene.setBackgroundEnabled(true);
 
         this.mMenuScene.setOnMenuItemClickListener(this);
 
         this.mGameScene.setChildScene(this.mMenuScene, false, true, true);
+    }
+
+    private void showLevelMenu() {
+        MenuScene levelScene = new MenuScene(this.mCamera);
+
+        int menuButtonWidth = mMenuWidth;
+        int menuButtonHeight = mMenuHeight;
+
+        final SpriteMenuItem buttonLevel1 = new SpriteMenuItem(MENU_LEVEL_1, menuButtonWidth, menuButtonHeight, this.mMenuStartTextureRegion, this.getVertexBufferObjectManager());
+        buttonLevel1.setBlendFunction(GLES20.GL_SRC_ALPHA, GLES20.GL_ONE_MINUS_SRC_ALPHA);
+        buttonLevel1.setPosition(mCameraWidth / 2, mCameraHeight / 2);
+        levelScene.addMenuItem(buttonLevel1);
+
+        final SpriteMenuItem buttonLevel2 = new SpriteMenuItem(MENU_LEVEL_2, menuButtonWidth, menuButtonHeight, this.mMenuStartTextureRegion, this.getVertexBufferObjectManager());
+        buttonLevel2.setBlendFunction(GLES20.GL_SRC_ALPHA, GLES20.GL_ONE_MINUS_SRC_ALPHA);
+        buttonLevel2.setPosition(mCameraWidth / 2, mCameraHeight / 2);
+        levelScene.addMenuItem(buttonLevel2);
+
+        final SpriteMenuItem buttonLevel3 = new SpriteMenuItem(MENU_LEVEL_3, menuButtonWidth, menuButtonHeight, this.mMenuQuitTextureRegion, this.getVertexBufferObjectManager());
+        buttonLevel3.setBlendFunction(GLES20.GL_SRC_ALPHA, GLES20.GL_ONE_MINUS_SRC_ALPHA);
+        levelScene.addMenuItem(buttonLevel3);
+
+        final SpriteMenuItem butonBack = new SpriteMenuItem(MENU_BACK, menuButtonWidth, menuButtonHeight, this.mMenuQuitTextureRegion, this.getVertexBufferObjectManager());
+        butonBack.setBlendFunction(GLES20.GL_SRC_ALPHA, GLES20.GL_ONE_MINUS_SRC_ALPHA);
+        levelScene.addMenuItem(butonBack);
+
+        levelScene.buildAnimations();
+
+        levelScene.setBackgroundEnabled(true);
+
+        levelScene.setOnMenuItemClickListener(this);
+
+        this.mMenuScene.setChildScene(levelScene, false, true, true);
+    }
+
+    @Override
+    public boolean onMenuItemClicked(MenuScene pMenuScene, IMenuItem pMenuItem, float pMenuItemLocalX, float pMenuItemLocalY) {
+        switch(pMenuItem.getID()) {
+            case MENU_START:
+                this.mGameScene.clearChildScene();
+                startGame();
+                return true;
+            case MENU_RESUME:
+                this.mGameScene.clearChildScene();
+                continueGame();
+                return true;
+            case MENU_LEVEL:
+                showLevelMenu();
+                return true;
+            case MENU_QUIT:
+                stopTimer();
+				/* End Activity. */
+                this.finish();
+                return true;
+            case MENU_LEVEL_1:
+                this.mGameScene.clearChildScene();
+                changeLevel(LEVEL_1);
+                startGame();
+                return true;
+            case MENU_LEVEL_2:
+                this.mGameScene.clearChildScene();
+                changeLevel(LEVEL_2);
+                startGame();
+                return true;
+            case MENU_LEVEL_3:
+                this.mGameScene.clearChildScene();
+                changeLevel(LEVEL_3);
+                startGame();
+                return true;
+            case MENU_BACK:
+                mMenuScene.clearChildScene();
+                return true;
+            default:
+                return false;
+        }
+    }
+
+    private void changeLevel(int level) {
+        this.level = level;
     }
 
     // ===========================================================
@@ -303,17 +390,33 @@ public class TreeGame extends SimpleBaseGameActivity implements MenuScene.IOnMen
 
         final int scoreHeight = 40;
 
-		int rowCount = ( CAMERA_HEIGHT - scoreHeight ) / BranchEntity.BRANCH_HEIGHT;
-		int columnCount = CAMERA_WIDTH / BranchEntity.BRANCH_WIDTH;
+        final int padding = mCameraWidth / 20;
+
+        final int ableWidth = mCameraWidth - padding * 2;
+        final int ableHeigh = mCameraHeight - padding * 2;
+
+        int branchSize = ableWidth / 4;
+
+        if (level == 1) {
+            int requiredRowCount = 3;
+            int requiredColumnCount = 3;
+        } else if (level == 2){
+
+        } else if (level ==3) {
+
+        }
+
+		int rowCount = ( ableHeigh - scoreHeight ) / branchSize;
+		int columnCount = ableWidth / branchSize;
 
         TreePosition treePosition = new TreePosition();
-        treePosition.yFrom = rowCount * BranchEntity.BRANCH_HEIGHT +
-                ( ( CAMERA_HEIGHT - scoreHeight ) - rowCount * BranchEntity.BRANCH_HEIGHT ) / 2;
-        treePosition.xFrom = (CAMERA_WIDTH - columnCount * BranchEntity.BRANCH_WIDTH ) / 2;
+        treePosition.yFrom = rowCount * branchSize +
+                ( ( mCameraHeight - scoreHeight ) - rowCount * branchSize ) / 2;
+        treePosition.xFrom = (mCameraWidth - columnCount * branchSize ) / 2;
 
 		int[][] levelMatrix = LevelMatrixGenerator.generateLevelMatrix(rowCount, columnCount);
 
-		mTreeHolder.initTree(treePosition, columnCount, rowCount, levelMatrix);
+		mTreeHolder.initTree(branchSize, treePosition, columnCount, rowCount, levelMatrix);
 		mTreeHolder.shakeTree();
 
 	}

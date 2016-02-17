@@ -40,8 +40,8 @@ public class BranchDoubleEnded extends BranchEntity {
 		branchVariants.put(Side.Bottom, connectSides);
 	}
 
-	public BranchDoubleEnded(int columnNumber, int rowNumber, TreePosition treePosition, ITiledTextureRegion pTextureRegion, VertexBufferObjectManager pVertexBufferObjectManager, ITreeMaster treeMaster) {
-		super(columnNumber, rowNumber, treePosition, pTextureRegion, pVertexBufferObjectManager, treeMaster);
+	public BranchDoubleEnded(int columnNumber, int rowNumber, TreePosition treePosition, ITiledTextureRegion pTextureRegion, VertexBufferObjectManager pVertexBufferObjectManager, int branchSize, ITreeMaster treeMaster) {
+		super(columnNumber, rowNumber, treePosition, pTextureRegion, pVertexBufferObjectManager, branchSize, treeMaster);
 	}
 
 	@Override
