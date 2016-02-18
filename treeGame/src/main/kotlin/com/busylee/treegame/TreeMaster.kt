@@ -15,7 +15,7 @@ class TreeMaster(
         val mGameScene: Scene,
         val mSpriteTextures: Map<BranchType,ITiledTextureRegion>,
         val mVertexBufferObjectManager: VertexBufferObjectManager,
-        val mTreeMasterObserver: ITreeMasterObserver) : ITreeMaster {
+        val mTreeMasterObserver: ITreeMasterObserver) : Observable(), ITreeMaster  {
 
     var mBranchRoot: BranchEntity? = null
 

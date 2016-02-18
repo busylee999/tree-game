@@ -3,7 +3,6 @@ package com.busylee.treegame;
 import android.graphics.Typeface;
 import android.opengl.GLES20;
 import android.os.Bundle;
-import android.os.Handler;
 import android.util.DisplayMetrics;
 import android.widget.Toast;
 
@@ -15,6 +14,7 @@ import org.andengine.engine.options.ScreenOrientation;
 import org.andengine.engine.options.resolutionpolicy.FillResolutionPolicy;
 import org.andengine.entity.scene.Scene;
 import org.andengine.entity.scene.background.Background;
+import org.andengine.entity.scene.background.SpriteBackground;
 import org.andengine.entity.scene.menu.MenuScene;
 import org.andengine.entity.scene.menu.item.IMenuItem;
 import org.andengine.entity.scene.menu.item.SpriteMenuItem;
@@ -43,7 +43,7 @@ import static com.busylee.treegame.branch.BranchType.*;
 /**
  * Created by busylee on 14.02.15.
  */
-public class TreeGame extends SimpleBaseGameActivity implements MenuScene.IOnMenuItemClickListener, TreeMaster.ITreeMasterObserver {
+public class TreeGame extends SimpleBaseGameActivity implements MenuScene.IOnMenuItemClickListener, TreeMaster.ITreeMasterObserver, ScoreMaster.IScoreListener {
     // ===========================================================
     // Constants
     // ===========================================================
@@ -61,6 +61,14 @@ public class TreeGame extends SimpleBaseGameActivity implements MenuScene.IOnMen
     protected static final int LEVEL_1 = 1;
     protected static final int LEVEL_2 = 2;
     protected static final int LEVEL_3 = 3;
+
+    protected static final Map<Integer, Integer> LEVEL_TIME = new HashMap<Integer, Integer>();
+
+    static {
+        LEVEL_TIME.put(LEVEL_1, 60);
+        LEVEL_TIME.put(LEVEL_2, 240);
+        LEVEL_TIME.put(LEVEL_3, 480);
+    }
 
     protected static final int TIMER_INTERVAL = 1000; //1000 ms
     protected static final int SCORE_LIMIT_IN_SEC = 60 * 5; // 5 min
@@ -97,33 +105,13 @@ public class TreeGame extends SimpleBaseGameActivity implements MenuScene.IOnMen
     private int mMenuWidth;
     private int mMenuHeight;
 
-    private int level = 1;
+    private int currentLevel = 1;
 
-    private Handler mHandler;
-    private Runnable mTimerRunnable = new Runnable() {
-        @Override
-        public void run() {
-            if(mTimer) {
-                mScore ++;
-                mScoreText.setText(String.valueOf(mScore));
-                if(mScore < SCORE_LIMIT_IN_SEC)
-                    mHandler.postDelayed(this, TIMER_INTERVAL);
-                else
-                    onGameLose();
-            }
-        }
-    };
+    private ScoreMaster mScoreMaster;
 
 	// ===========================================================
     // AndEngine lifecycle methods
     // ===========================================================
-
-
-    @Override
-    protected void onCreate(Bundle pSavedInstanceState) {
-        super.onCreate(pSavedInstanceState);
-        mHandler = new Handler();
-    }
 
     @Override
 	protected void onCreateResources() throws IOException {
@@ -196,6 +184,12 @@ public class TreeGame extends SimpleBaseGameActivity implements MenuScene.IOnMen
     }
 
     @Override
+    protected void onCreate(Bundle pSavedInstanceState) {
+        super.onCreate(pSavedInstanceState);
+        mScoreMaster = new ScoreMaster(this);
+    }
+
+    @Override
     public synchronized void onPauseGame() {
         super.onPauseGame();
         showMenu(true);
@@ -265,12 +259,13 @@ public class TreeGame extends SimpleBaseGameActivity implements MenuScene.IOnMen
         buttonLevel3.setBlendFunction(GLES20.GL_SRC_ALPHA, GLES20.GL_ONE_MINUS_SRC_ALPHA);
         levelScene.addMenuItem(buttonLevel3);
 
-        final SpriteMenuItem butonBack = new SpriteMenuItem(MENU_BACK, menuButtonWidth, menuButtonHeight, this.mMenuQuitTextureRegion, this.getVertexBufferObjectManager());
-        butonBack.setBlendFunction(GLES20.GL_SRC_ALPHA, GLES20.GL_ONE_MINUS_SRC_ALPHA);
-        levelScene.addMenuItem(butonBack);
+        final SpriteMenuItem button = new SpriteMenuItem(MENU_BACK, menuButtonWidth, menuButtonHeight, this.mMenuQuitTextureRegion, this.getVertexBufferObjectManager());
+        button.setBlendFunction(GLES20.GL_SRC_ALPHA, GLES20.GL_ONE_MINUS_SRC_ALPHA);
+        levelScene.addMenuItem(button);
 
         levelScene.buildAnimations();
 
+        levelScene.setBackground(new SpriteBackground(button));
         levelScene.setBackgroundEnabled(true);
 
         levelScene.setOnMenuItemClickListener(this);
@@ -321,7 +316,7 @@ public class TreeGame extends SimpleBaseGameActivity implements MenuScene.IOnMen
     }
 
     private void changeLevel(int level) {
-        this.level = level;
+        this.currentLevel = level;
     }
 
     // ===========================================================
@@ -332,6 +327,7 @@ public class TreeGame extends SimpleBaseGameActivity implements MenuScene.IOnMen
         removeTree();
         showTree();
         resetTimer();
+        initTimer(LEVEL_TIME.get(this.currentLevel));
         startTimer();
     }
 
@@ -343,7 +339,13 @@ public class TreeGame extends SimpleBaseGameActivity implements MenuScene.IOnMen
         startTimer();
     }
 
-    private synchronized void onGameLose() {
+    @Override
+    public void onTimeLeftChange(int timeLeft) {
+        mScoreText.setText(String.valueOf(mScoreMaster.getMTimeLeft()));
+    }
+
+    @Override
+    public void onGameLose() {
         stopTimer();
         //todo stub
         runOnUiThread(new Runnable() {
@@ -366,20 +368,26 @@ public class TreeGame extends SimpleBaseGameActivity implements MenuScene.IOnMen
         });
     }
 
+    private void initTimer(int timeLeft) {
+        updateTimerText(timeLeft);
+        mScoreMaster.initTimer(timeLeft);
+    }
+
     private void startTimer() {
-        mTimer = true;
-        mHandler.postDelayed(mTimerRunnable, TIMER_INTERVAL);
+        mScoreMaster.startTimer();
     }
 
     private void stopTimer() {
-        mTimer = false;
-        mHandler.removeCallbacks(mTimerRunnable);
+        mScoreMaster.stopTimer();
     }
 
     private void resetTimer() {
-        stopTimer();
-        mScore = 0;
-        mScoreText.setText(String.valueOf(mScore));
+        mScoreMaster.resetTimer();
+        updateTimerText(mScoreMaster.getMTimeLeft());
+    }
+
+    private void updateTimerText(int time) {
+        mScoreText.setText(String.valueOf(time));
     }
 
     // ===========================================================
@@ -390,29 +398,45 @@ public class TreeGame extends SimpleBaseGameActivity implements MenuScene.IOnMen
 
         final int scoreHeight = 40;
 
-        final int padding = mCameraWidth / 20;
+        final int paddingW = mCameraWidth / 20;
+        final int paddingH = paddingW - scoreHeight;
 
-        final int ableWidth = mCameraWidth - padding * 2;
-        final int ableHeigh = mCameraHeight - padding * 2;
+        final int ableWidth = mCameraWidth - paddingW * 2;
+        final int ableHeight = mCameraHeight - paddingW * 2;
 
-        int branchSize = ableWidth / 4;
+        //size must be devided by two
+        int branchSize = ableWidth / 8;
+        branchSize = branchSize % 2 == 0 ? branchSize : branchSize + 1;
 
-        if (level == 1) {
+        int rowCount = ( ableHeight - scoreHeight ) / branchSize;
+        int columnCount = ableWidth / branchSize;
+
+        if (currentLevel == 1) {
             int requiredRowCount = 3;
             int requiredColumnCount = 3;
-        } else if (level == 2){
+            rowCount = requiredRowCount;
+            columnCount = requiredColumnCount;
+        } else if (currentLevel == 2){
+            int requiredRowCount = 6;
+            int requiredColumnCount = 6;
+            rowCount = requiredRowCount;
+            columnCount = requiredColumnCount;
+        } else if (currentLevel == 3) {
+            int requiredRowCount = 9;
+            int requiredColumnCount = 9;
 
-        } else if (level ==3) {
+            if (requiredRowCount * branchSize > ableWidth) {
+                branchSize = ableWidth /requiredRowCount;
+            }
 
+            rowCount = requiredRowCount;
+            columnCount = requiredColumnCount;
         }
-
-		int rowCount = ( ableHeigh - scoreHeight ) / branchSize;
-		int columnCount = ableWidth / branchSize;
 
         TreePosition treePosition = new TreePosition();
         treePosition.yFrom = rowCount * branchSize +
-                ( ( mCameraHeight - scoreHeight ) - rowCount * branchSize ) / 2;
-        treePosition.xFrom = (mCameraWidth - columnCount * branchSize ) / 2;
+                ( mCameraHeight - scoreHeight - rowCount * branchSize ) / 2;
+        treePosition.xFrom = (mCameraWidth - columnCount * branchSize) / 2;
 
 		int[][] levelMatrix = LevelMatrixGenerator.generateLevelMatrix(rowCount, columnCount);
 
@@ -428,5 +452,4 @@ public class TreeGame extends SimpleBaseGameActivity implements MenuScene.IOnMen
 	private void removeTree() {
 		this.mTreeHolder.removeTree();
 	}
-
 }
