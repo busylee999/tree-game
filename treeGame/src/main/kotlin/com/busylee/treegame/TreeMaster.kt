@@ -2,6 +2,7 @@ package com.busylee.treegame
 
 import com.busylee.treegame.branch.*
 import com.busylee.treegame.branch.BranchType.*
+import org.andengine.entity.modifier.AlphaModifier
 import org.andengine.entity.scene.Scene
 import org.andengine.opengl.texture.region.ITiledTextureRegion
 import org.andengine.opengl.vbo.VertexBufferObjectManager
@@ -33,8 +34,12 @@ class TreeMaster(
         deathAllBranches()
         mBranchRoot?.updateAliveState(BranchEntity.Side.Left)
 
-        if (checkWin())
+        if (checkWin()) {
             mTreeMasterObserver.onGameWin()
+        } else {
+            setChanged()
+            notifyObservers()
+        }
     }
 
     fun initTree(branchSize: Int, treePosition: TreePosition, columnCount: Int, rowCount: Int, levelMatrix: Array<IntArray>) {
@@ -128,6 +133,7 @@ class TreeMaster(
     fun addBranch(branchType: BranchType, columnNumber: Int, rowNumber: Int, treePosition: TreePosition, side: BranchEntity.Side, branchSize: Int): BranchEntity {
         val branchEntity = createBranchEntity(branchType, columnNumber, rowNumber, treePosition, branchSize, this)
         branchEntity.anchorSide = side
+        branchEntity.registerEntityModifier(AlphaModifier(1f, 0f, 1f))
         this.mGameScene.registerTouchArea(branchEntity)
         this.mGameScene.attachChild(branchEntity)
         return branchEntity

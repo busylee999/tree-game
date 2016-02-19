@@ -57,7 +57,9 @@ class ScoreMaster(val mScoreListener: IScoreListener): Observer {
     }
 
     internal fun decreaseTime(): Boolean {
-        mTimeLeft--
+        if(mTimeLeft > 0) {
+            mTimeLeft--
+        }
         mScoreListener.onTimeLeftChange(mTimeLeft)
         return mTimeLeft > 0
     }

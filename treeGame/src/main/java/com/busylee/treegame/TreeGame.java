@@ -12,6 +12,11 @@ import org.andengine.engine.camera.Camera;
 import org.andengine.engine.options.EngineOptions;
 import org.andengine.engine.options.ScreenOrientation;
 import org.andengine.engine.options.resolutionpolicy.FillResolutionPolicy;
+import org.andengine.entity.IEntity;
+import org.andengine.entity.modifier.AlphaModifier;
+import org.andengine.entity.modifier.IEntityModifier;
+import org.andengine.entity.modifier.ScaleAtModifier;
+import org.andengine.entity.modifier.ScaleModifier;
 import org.andengine.entity.scene.Scene;
 import org.andengine.entity.scene.background.Background;
 import org.andengine.entity.scene.background.SpriteBackground;
@@ -19,6 +24,7 @@ import org.andengine.entity.scene.menu.MenuScene;
 import org.andengine.entity.scene.menu.item.IMenuItem;
 import org.andengine.entity.scene.menu.item.SpriteMenuItem;
 import org.andengine.entity.sprite.ButtonSprite;
+import org.andengine.entity.sprite.Sprite;
 import org.andengine.entity.text.Text;
 import org.andengine.entity.text.TextOptions;
 import org.andengine.entity.util.FPSLogger;
@@ -33,10 +39,14 @@ import org.andengine.opengl.texture.region.ITiledTextureRegion;
 import org.andengine.opengl.vbo.VertexBufferObjectManager;
 import org.andengine.ui.activity.SimpleBaseGameActivity;
 import org.andengine.util.adt.align.HorizontalAlign;
+import org.andengine.util.modifier.IModifier;
+import org.andengine.util.modifier.ease.IEaseFunction;
 
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
+
+import javax.microedition.khronos.opengles.GL10;
 
 import static com.busylee.treegame.branch.BranchType.*;
 
@@ -69,6 +79,12 @@ public class TreeGame extends SimpleBaseGameActivity implements MenuScene.IOnMen
         LEVEL_TIME.put(LEVEL_2, 240);
         LEVEL_TIME.put(LEVEL_3, 480);
     }
+
+//    static {
+//        LEVEL_TIME.put(LEVEL_1, 5);
+//        LEVEL_TIME.put(LEVEL_2, 5);
+//        LEVEL_TIME.put(LEVEL_3, 5);
+//    }
 
     protected static final int TIMER_INTERVAL = 1000; //1000 ms
     protected static final int SCORE_LIMIT_IN_SEC = 60 * 5; // 5 min
@@ -109,6 +125,8 @@ public class TreeGame extends SimpleBaseGameActivity implements MenuScene.IOnMen
 
     private ScoreMaster mScoreMaster;
 
+    private Sprite mWinSprite;
+    private Sprite mLoseSprite;
 	// ===========================================================
     // AndEngine lifecycle methods
     // ===========================================================
@@ -142,27 +160,26 @@ public class TreeGame extends SimpleBaseGameActivity implements MenuScene.IOnMen
 		this.mGameScene = new Scene();
 		this.mGameScene.setBackground(new Background(0, 20, 20));
 		this.mTreeHolder = new TreeMaster(this.mGameScene, this.mBranchTilesMap, this.mVertexBufferObjectManager, this);
-
-        ButtonSprite menuButton = new ButtonSprite(0 , 0, this.mMenuButtonTextureRegion, this.getVertexBufferObjectManager()) {
+        this.mTreeHolder.addObserver(this.mScoreMaster);
+        // ADD CALL MENU BUTTON
+        ButtonSprite menuButton = new ButtonSprite(0 , 0, this.mMenuButtonTextureRegion, this.getVertexBufferObjectManager());
+        menuButton.setPosition(mCameraWidth - menuButton.getWidth() / 2, mCameraHeight - menuButton.getHeight() / 2);
+        menuButton.setOnClickListener(new ButtonSprite.OnClickListener() {
             @Override
-            public boolean onAreaTouched(TouchEvent pSceneTouchEvent, float pTouchAreaLocalX, float pTouchAreaLocalY) {
+            public void onClick(ButtonSprite pButtonSprite, float pTouchAreaLocalX, float pTouchAreaLocalY) {
                 showMenu(true);
                 pauseGame();
-                return true;
             }
-        };
-        menuButton.setPosition(mCameraWidth - menuButton.getWidth() / 2, mCameraHeight - menuButton.getHeight() / 2);
+        });
+        this.mGameScene.registerTouchArea(menuButton);
+        this.mGameScene.attachChild(menuButton);
 
         // CREATE SCORE TEXT
         Font font = FontFactory.create(this.getFontManager(), this.getTextureManager(), 256, 256, TextureOptions.BILINEAR, Typeface.create(Typeface.DEFAULT, Typeface.BOLD), 32);
         font.load();
-
-        mScoreText = new Text(0, mCameraHeight, font, "Score: 0123456789", new TextOptions(HorizontalAlign.LEFT), this.getVertexBufferObjectManager());
+        mScoreText = new Text(0, mCameraHeight, font, "TIME LEFT: 1000000", new TextOptions(HorizontalAlign.LEFT), this.getVertexBufferObjectManager());
         mScoreText.setPosition(0 + mScoreText.getWidth() / 2, mCameraHeight - mScoreText.getHeight() / 2);
         this.mGameScene.attachChild(mScoreText);
-
-        this.mGameScene.registerTouchArea(menuButton);
-        this.mGameScene.attachChild(menuButton);
 
         showMenu();
         return this.mGameScene;
@@ -341,12 +358,11 @@ public class TreeGame extends SimpleBaseGameActivity implements MenuScene.IOnMen
 
     @Override
     public void onTimeLeftChange(int timeLeft) {
-        mScoreText.setText(String.valueOf(mScoreMaster.getMTimeLeft()));
+        updateTimerText(timeLeft);
     }
 
     @Override
     public void onGameLose() {
-        stopTimer();
         //todo stub
         runOnUiThread(new Runnable() {
             @Override
@@ -358,11 +374,15 @@ public class TreeGame extends SimpleBaseGameActivity implements MenuScene.IOnMen
 
 	@Override
     public void onGameWin() {
-        stopTimer();
+        if(mScoreMaster.getMTimeLeft() <= 0) {
+            return;
+        }
+        startGame();
         //todo stub
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
+
                 Toast.makeText(TreeGame.this, "You win!!!", Toast.LENGTH_SHORT).show();
             }
         });
@@ -387,7 +407,8 @@ public class TreeGame extends SimpleBaseGameActivity implements MenuScene.IOnMen
     }
 
     private void updateTimerText(int time) {
-        mScoreText.setText(String.valueOf(time));
+        //TODO move to resources
+        mScoreText.setText("TIME LEFT " +  String.valueOf(time));
     }
 
     // ===========================================================
@@ -446,10 +467,11 @@ public class TreeGame extends SimpleBaseGameActivity implements MenuScene.IOnMen
 	}
 
 	private void showCorrectAnswer() {
-        this.mTreeHolder.showCorrectAnswer();
+        this.mTreeHolder.   showCorrectAnswer();
     }
 
 	private void removeTree() {
 		this.mTreeHolder.removeTree();
 	}
+
 }
