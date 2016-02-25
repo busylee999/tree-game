@@ -12,11 +12,6 @@ import org.andengine.engine.camera.Camera;
 import org.andengine.engine.options.EngineOptions;
 import org.andengine.engine.options.ScreenOrientation;
 import org.andengine.engine.options.resolutionpolicy.FillResolutionPolicy;
-import org.andengine.entity.IEntity;
-import org.andengine.entity.modifier.AlphaModifier;
-import org.andengine.entity.modifier.IEntityModifier;
-import org.andengine.entity.modifier.ScaleAtModifier;
-import org.andengine.entity.modifier.ScaleModifier;
 import org.andengine.entity.scene.Scene;
 import org.andengine.entity.scene.background.Background;
 import org.andengine.entity.scene.background.SpriteBackground;
@@ -28,25 +23,21 @@ import org.andengine.entity.sprite.Sprite;
 import org.andengine.entity.text.Text;
 import org.andengine.entity.text.TextOptions;
 import org.andengine.entity.util.FPSLogger;
-import org.andengine.input.touch.TouchEvent;
 import org.andengine.opengl.font.Font;
 import org.andengine.opengl.font.FontFactory;
 import org.andengine.opengl.texture.TextureOptions;
 import org.andengine.opengl.texture.atlas.bitmap.BitmapTextureAtlas;
 import org.andengine.opengl.texture.atlas.bitmap.BitmapTextureAtlasTextureRegionFactory;
-import org.andengine.opengl.texture.region.ITextureRegion;
 import org.andengine.opengl.texture.region.ITiledTextureRegion;
+import org.andengine.opengl.texture.region.TextureRegion;
+import org.andengine.opengl.texture.region.TiledTextureRegion;
 import org.andengine.opengl.vbo.VertexBufferObjectManager;
 import org.andengine.ui.activity.SimpleBaseGameActivity;
 import org.andengine.util.adt.align.HorizontalAlign;
-import org.andengine.util.modifier.IModifier;
-import org.andengine.util.modifier.ease.IEaseFunction;
 
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
-
-import javax.microedition.khronos.opengles.GL10;
 
 import static com.busylee.treegame.branch.BranchType.*;
 
@@ -98,10 +89,6 @@ public class TreeGame extends SimpleBaseGameActivity implements MenuScene.IOnMen
 
 	private Map<BranchType, ITiledTextureRegion> mBranchTilesMap;
 
-    protected ITextureRegion mMenuStartTextureRegion;
-	protected ITextureRegion mMenuButtonTextureRegion;
-    protected ITextureRegion mMenuQuitTextureRegion;
-
 	private Camera mCamera;
 
 	private Scene mGameScene;
@@ -111,9 +98,6 @@ public class TreeGame extends SimpleBaseGameActivity implements MenuScene.IOnMen
 	private TreeMaster mTreeHolder;
 
     private Text mScoreText;
-
-    private int mScore;
-    private boolean mTimer;
 
     private int mCameraWidth;
     private int mCameraHeight;
@@ -127,7 +111,14 @@ public class TreeGame extends SimpleBaseGameActivity implements MenuScene.IOnMen
 
     private Sprite mWinSprite;
     private Sprite mLoseSprite;
-	// ===========================================================
+    private TiledTextureRegion mMenuNewGameTextureRegion;
+    private TiledTextureRegion mMenuLevelTextureRegion;
+    private TiledTextureRegion mMenuResumeTextureRegion;
+    private TiledTextureRegion mMenuSettingsTextureRegion;
+    private TiledTextureRegion mMenuQuitTextureRegion;
+    private TiledTextureRegion mPauseTextureRegion;
+    private TextureRegion mBackgroundTextureRegion;
+    // ===========================================================
     // AndEngine lifecycle methods
     // ===========================================================
 
@@ -146,11 +137,27 @@ public class TreeGame extends SimpleBaseGameActivity implements MenuScene.IOnMen
 //		mBranchTilesMap.put(Root, BitmapTextureAtlasTextureRegionFactory.createTiledFromAsset(mBitmapTextureAtlas, this, "branch_leaf.png", 0, 131, 1, 1)); // 32x32
 		mBitmapTextureAtlas.load();
 
-        BitmapTextureAtlas mMenuTextureAtlas = new BitmapTextureAtlas(this.getTextureManager(), 200, 150, TextureOptions.BILINEAR);
-        this.mMenuStartTextureRegion = BitmapTextureAtlasTextureRegionFactory.createFromAsset(mMenuTextureAtlas, this, "menu_reset.png", 0, 0);
-		this.mMenuButtonTextureRegion = BitmapTextureAtlasTextureRegionFactory.createFromAsset(mMenuTextureAtlas, this, "menu_button.png", 0, 50);
-        this.mMenuQuitTextureRegion = BitmapTextureAtlasTextureRegionFactory.createFromAsset(mMenuTextureAtlas, this, "menu_quit.png", 0, 100);
+//        BitmapTextureAtlas mMenuTextureAtlas = new BitmapTextureAtlas(this.getTextureManager(), 200, 150, TextureOptions.BILINEAR);
+//        this.mMenuStartTextureRegion = BitmapTextureAtlasTextureRegionFactory.createFromAsset(mMenuTextureAtlas, this, "menu_reset.png", 0, 0);
+//		this.mMenuButtonTextureRegion = BitmapTextureAtlasTextureRegionFactory.createFromAsset(mMenuTextureAtlas, this, "menu_button.png", 0, 50);
+//        this.mMenuQuitTextureRegion = BitmapTextureAtlasTextureRegionFactory.createFromAsset(mMenuTextureAtlas, this, "menu_quit.png", 0, 100);
+//        mMenuTextureAtlas.load();
+
+        BitmapTextureAtlas mMenuTextureAtlas = new BitmapTextureAtlas(this.getTextureManager(), 400, 1500, TextureOptions.DEFAULT);
+        this.mMenuNewGameTextureRegion = BitmapTextureAtlasTextureRegionFactory.createTiledFromAsset(mMenuTextureAtlas, this, "button_play.png", 0, 0, 1, 2);
+        this.mMenuLevelTextureRegion = BitmapTextureAtlasTextureRegionFactory.createTiledFromAsset(mMenuTextureAtlas, this, "button_level.png", 0, 300, 1, 2);
+        this.mMenuResumeTextureRegion = BitmapTextureAtlasTextureRegionFactory.createTiledFromAsset(mMenuTextureAtlas, this, "button_resume.png", 0, 600, 1, 2);
+        this.mMenuSettingsTextureRegion = BitmapTextureAtlasTextureRegionFactory.createTiledFromAsset(mMenuTextureAtlas, this, "button_settings.png", 0, 900, 1, 2);
+        this.mMenuQuitTextureRegion = BitmapTextureAtlasTextureRegionFactory.createTiledFromAsset(mMenuTextureAtlas, this, "button_quit.png", 0, 1200, 1, 2);
         mMenuTextureAtlas.load();
+
+        BitmapTextureAtlas mGameButtonTextureAtlas = new BitmapTextureAtlas(this.getTextureManager(), 400, 300, TextureOptions.DEFAULT);
+        this.mPauseTextureRegion = BitmapTextureAtlasTextureRegionFactory.createTiledFromAsset(mGameButtonTextureAtlas, this, "button_pause.png", 0, 0, 1, 2);
+        mGameButtonTextureAtlas.load();
+
+        BitmapTextureAtlas mGameBackgroundTextureAtlas = new BitmapTextureAtlas(this.getTextureManager(), 700, 700, TextureOptions.DEFAULT);
+        this.mBackgroundTextureRegion = BitmapTextureAtlasTextureRegionFactory.createFromAsset(mGameBackgroundTextureAtlas , this, "game_background.png", 0, 0);
+        mGameBackgroundTextureAtlas.load();
 	}
 
 	@Override
@@ -158,11 +165,15 @@ public class TreeGame extends SimpleBaseGameActivity implements MenuScene.IOnMen
 		this.mEngine.registerUpdateHandler(new FPSLogger());
 
 		this.mGameScene = new Scene();
-		this.mGameScene.setBackground(new Background(0, 20, 20));
+        final float centerX = mBackgroundTextureRegion.getWidth() / 2;
+        final float centerY = mBackgroundTextureRegion.getHeight() / 2;
+        Sprite backGroundSprite = new Sprite(centerX, centerY, mBackgroundTextureRegion, this.mVertexBufferObjectManager);
+        SpriteBackground background = new SpriteBackground(20f, 20f, 20f, backGroundSprite);
+        this.mGameScene.setBackground(background);
 		this.mTreeHolder = new TreeMaster(this.mGameScene, this.mBranchTilesMap, this.mVertexBufferObjectManager, this);
         this.mTreeHolder.addObserver(this.mScoreMaster);
         // ADD CALL MENU BUTTON
-        ButtonSprite menuButton = new ButtonSprite(0 , 0, this.mMenuButtonTextureRegion, this.getVertexBufferObjectManager());
+        ButtonSprite menuButton = new ButtonSprite(0 , 0, this.mPauseTextureRegion, this.getVertexBufferObjectManager());
         menuButton.setPosition(mCameraWidth - menuButton.getWidth() / 2, mCameraHeight - menuButton.getHeight() / 2);
         menuButton.setOnClickListener(new ButtonSprite.OnClickListener() {
             @Override
@@ -193,7 +204,7 @@ public class TreeGame extends SimpleBaseGameActivity implements MenuScene.IOnMen
         getWindowManager().getDefaultDisplay().getMetrics(metrics);
         mCameraWidth = metrics.widthPixels;
         mCameraHeight = metrics.heightPixels;
-        mMenuWidth = mCameraWidth / 4;
+        mMenuWidth = mCameraWidth / 3;
         mMenuHeight = mCameraHeight / 8;
         mCamera = new Camera(0, 0, mCameraWidth, mCameraHeight);
 
@@ -227,24 +238,24 @@ public class TreeGame extends SimpleBaseGameActivity implements MenuScene.IOnMen
         int menuButtonHeight = mMenuHeight;
 
         if(isPause) {
-            final SpriteMenuItem continueMenuItem = new SpriteMenuItem(MENU_RESUME, menuButtonWidth, menuButtonHeight, this.mMenuStartTextureRegion, this.getVertexBufferObjectManager());
-            continueMenuItem.setBlendFunction(GLES20.GL_SRC_ALPHA, GLES20.GL_ONE_MINUS_SRC_ALPHA);
+            final ButtonMenuItem continueMenuItem = new ButtonMenuItem(MENU_RESUME, menuButtonWidth, menuButtonHeight, this.mMenuResumeTextureRegion, this.getVertexBufferObjectManager());
+//            continueMenuItem.setBlendFunction(GLES20.GL_SRC_ALPHA, GLES20.GL_ONE_MINUS_SRC_ALPHA);
             continueMenuItem.setPosition(mCameraWidth / 2, mCameraHeight / 2);
             this.mMenuScene.addMenuItem(continueMenuItem);
         }
 
-        final SpriteMenuItem newGameMenuItem = new SpriteMenuItem(MENU_START, menuButtonWidth, menuButtonHeight, this.mMenuStartTextureRegion, this.getVertexBufferObjectManager());
-        newGameMenuItem.setBlendFunction(GLES20.GL_SRC_ALPHA, GLES20.GL_ONE_MINUS_SRC_ALPHA);
+        final ButtonMenuItem newGameMenuItem = new ButtonMenuItem(MENU_START, menuButtonWidth, menuButtonHeight, this.mMenuNewGameTextureRegion, this.getVertexBufferObjectManager());
+//        newGameMenuItem.setBlendFunction(GLES20.GL_SRC_ALPHA, GLES20.GL_ONE_MINUS_SRC_ALPHA);
         newGameMenuItem.setPosition(mCameraWidth / 2, mCameraHeight / 2);
         this.mMenuScene.addMenuItem(newGameMenuItem);
 
-        final SpriteMenuItem levelChangeItem = new SpriteMenuItem(MENU_LEVEL, menuButtonWidth, menuButtonHeight, this.mBranchTilesMap.get(Leaf), this.getVertexBufferObjectManager());
-        levelChangeItem.setBlendFunction(GLES20.GL_SRC_ALPHA, GLES20.GL_ONE_MINUS_SRC_ALPHA);
+        final ButtonMenuItem levelChangeItem = new ButtonMenuItem(MENU_LEVEL, menuButtonWidth, menuButtonHeight, this.mMenuLevelTextureRegion, this.getVertexBufferObjectManager());
+//        levelChangeItem.setBlendFunction(GLES20.GL_SRC_ALPHA, GLES20.GL_ONE_MINUS_SRC_ALPHA);
         levelChangeItem.setPosition(mCameraWidth / 2, mCameraHeight / 2);
         this.mMenuScene.addMenuItem(levelChangeItem);
 
-        final SpriteMenuItem quitMenuItem = new SpriteMenuItem(MENU_QUIT, menuButtonWidth, menuButtonHeight, this.mMenuQuitTextureRegion, this.getVertexBufferObjectManager());
-        quitMenuItem.setBlendFunction(GLES20.GL_SRC_ALPHA, GLES20.GL_ONE_MINUS_SRC_ALPHA);
+        final ButtonMenuItem quitMenuItem = new ButtonMenuItem(MENU_QUIT, menuButtonWidth, menuButtonHeight, this.mMenuQuitTextureRegion, this.getVertexBufferObjectManager());
+//        quitMenuItem.setBlendFunction(GLES20.GL_SRC_ALPHA, GLES20.GL_ONE_MINUS_SRC_ALPHA);
         this.mMenuScene.addMenuItem(quitMenuItem);
 
         this.mMenuScene.buildAnimations();
@@ -262,21 +273,21 @@ public class TreeGame extends SimpleBaseGameActivity implements MenuScene.IOnMen
         int menuButtonWidth = mMenuWidth;
         int menuButtonHeight = mMenuHeight;
 
-        final SpriteMenuItem buttonLevel1 = new SpriteMenuItem(MENU_LEVEL_1, menuButtonWidth, menuButtonHeight, this.mMenuStartTextureRegion, this.getVertexBufferObjectManager());
+        final ButtonMenuItem buttonLevel1 = new ButtonMenuItem(MENU_LEVEL_1, menuButtonWidth, menuButtonHeight, this.mMenuLevelTextureRegion, this.getVertexBufferObjectManager());
         buttonLevel1.setBlendFunction(GLES20.GL_SRC_ALPHA, GLES20.GL_ONE_MINUS_SRC_ALPHA);
         buttonLevel1.setPosition(mCameraWidth / 2, mCameraHeight / 2);
         levelScene.addMenuItem(buttonLevel1);
 
-        final SpriteMenuItem buttonLevel2 = new SpriteMenuItem(MENU_LEVEL_2, menuButtonWidth, menuButtonHeight, this.mMenuStartTextureRegion, this.getVertexBufferObjectManager());
+        final ButtonMenuItem buttonLevel2 = new ButtonMenuItem(MENU_LEVEL_2, menuButtonWidth, menuButtonHeight, this.mMenuLevelTextureRegion, this.getVertexBufferObjectManager());
         buttonLevel2.setBlendFunction(GLES20.GL_SRC_ALPHA, GLES20.GL_ONE_MINUS_SRC_ALPHA);
         buttonLevel2.setPosition(mCameraWidth / 2, mCameraHeight / 2);
         levelScene.addMenuItem(buttonLevel2);
 
-        final SpriteMenuItem buttonLevel3 = new SpriteMenuItem(MENU_LEVEL_3, menuButtonWidth, menuButtonHeight, this.mMenuQuitTextureRegion, this.getVertexBufferObjectManager());
+        final ButtonMenuItem buttonLevel3 = new ButtonMenuItem(MENU_LEVEL_3, menuButtonWidth, menuButtonHeight, this.mMenuLevelTextureRegion, this.getVertexBufferObjectManager());
         buttonLevel3.setBlendFunction(GLES20.GL_SRC_ALPHA, GLES20.GL_ONE_MINUS_SRC_ALPHA);
         levelScene.addMenuItem(buttonLevel3);
 
-        final SpriteMenuItem button = new SpriteMenuItem(MENU_BACK, menuButtonWidth, menuButtonHeight, this.mMenuQuitTextureRegion, this.getVertexBufferObjectManager());
+        final ButtonMenuItem button = new ButtonMenuItem(MENU_BACK, menuButtonWidth, menuButtonHeight, this.mMenuQuitTextureRegion, this.getVertexBufferObjectManager());
         button.setBlendFunction(GLES20.GL_SRC_ALPHA, GLES20.GL_ONE_MINUS_SRC_ALPHA);
         levelScene.addMenuItem(button);
 
